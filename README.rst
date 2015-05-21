@@ -7,9 +7,9 @@ and proteins through comptuational experiments. They build models,
 they simulate them, they extract quantitative data,
 and finally they make figures that result in mind-blowing papers.
 Extracting data from simulation data sets is typically performed with
-analysis software like [MDAnalysis](https://github.com/MDAnalysis/mdanalysis),
-[LOOS](http://loos.sourceforge.net/), [VMD](http://www.ks.uiuc.edu/Research/vmd/),
-[MDTraj](https://github.com/mdtraj/mdtraj), or other simulation package utilities.
+analysis software like `MDAnalysis<https://github.com/MDAnalysis/mdanalysis>`__, 
+`LOOS<http://loos.sourceforge.net/>`__, `VMD<http://www.ks.uiuc.edu/Research/vmd/>`__,
+`MDTraj<https://github.com/mdtraj/mdtraj>`__, or other simulation package utilities.
 
 It is the aim of this package to provide a higher level organizational framework
 for executing molecular dynamics analysis that supports many analysis packages
@@ -25,6 +25,7 @@ MDGenesis is an analysis wrapper that aims to provide a higher level
 interface for executing analysis modules of all varieties. While it currently
 offers no benefits other than organizational ones, future functionality may
 include the following:
+
 * Parallelism using analysis batches (analysis #1 on CPU1, analysis #2 on CPU2)
 * Parallelism using chunked analysis (frames 0-10 on CPU1, frames 10-20 on CPU2)
 * Detection and analysis of new data (+10 frames in source, append analysis)
@@ -37,8 +38,8 @@ Shout Outs
 
 Let's be honest here, below the thin veil of README jargon and empty promises,
 MDGenesis is nothing more than a glorified wrapper around 
-[MDSynthesis](https://github.com/Becksteinlab/MDSynthesis).
+`MDSynthesis <https://github.com/Becksteinlab/MDSynthesis>`_.
 Thanks to David Dotson for creating it!
 
 The principle behind this package and several analysis routines are taken
-directly from the library [Batcha](https://github.com/davecap/batcha).
+directly from the library `Batcha <https://github.com/davecap/batcha>`__.
