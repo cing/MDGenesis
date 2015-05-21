@@ -7,9 +7,9 @@ and proteins through comptuational experiments. They build models,
 they simulate them, they extract quantitative data,
 and finally they make figures that result in mind-blowing papers.
 Extracting data from simulation data sets is typically performed with
-analysis software like `MDAnalysis<https://github.com/MDAnalysis/mdanalysis>`__, 
-`LOOS<http://loos.sourceforge.net/>`__, `VMD<http://www.ks.uiuc.edu/Research/vmd/>`__,
-`MDTraj<https://github.com/mdtraj/mdtraj>`__, or other simulation package utilities.
+analysis software like `MDAnalysis <https://github.com/MDAnalysis/mdanalysis>`_, 
+`LOOS <http://loos.sourceforge.net/>`_, `VMD <http://www.ks.uiuc.edu/Research/vmd/>`_,
+`MDTraj <https://github.com/mdtraj/mdtraj>`_, or other simulation package utilities.
 
 It is the aim of this package to provide a higher level organizational framework
 for executing molecular dynamics analysis that supports many analysis packages
@@ -40,8 +40,6 @@ Let's be honest here, below the thin veil of README jargon and empty promises,
 MDGenesis is nothing more than a glorified wrapper around 
 `MDSynthesis <https://github.com/Becksteinlab/MDSynthesis>`_.
 Thanks to David Dotson for creating it!
-
-`A link <http://www.google.com>`_
 
 The principle behind this package and several analysis routines are taken
 directly from the library `Batcha <https://github.com/davecap/batcha>`__.
