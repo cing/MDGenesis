@@ -41,5 +41,7 @@ MDGenesis is nothing more than a glorified wrapper around
 `MDSynthesis <https://github.com/Becksteinlab/MDSynthesis>`_.
 Thanks to David Dotson for creating it!
 
+`A link <http://www.google.com>`_
+
 The principle behind this package and several analysis routines are taken
 directly from the library `Batcha <https://github.com/davecap/batcha>`__.
