@@ -1,25 +1,22 @@
 ==========================================================================
-MDGenesis: an asynchronus analysis manager for molecular dynamics data
+MDGenesis: a batch molecular dynamics analysis executor/wrapper
 ==========================================================================
 
 Molecular dynamicists study the dynamic fluctuations of atoms, molecules,
-and proteins through comptuational experiments. First they build models,
-then they simulate them, then they extract data, and then they perform analysis,
-ultimately leading to figures and tables that make up mind-blowing papers.
-Extraction of data from simulation trajectories is typically performed with
-analysis software like MDAnalysis, LOOS, VMD, MDTraj, or simulation package
-specific utilities. Despite the existence of a wide selection of analysis
-packages, many types of analysis scripts are routinely performed.
+and proteins through comptuational experiments. They build models,
+they simulate them, they extract quantitative data,
+and finally they make figures that result in mind-blowing papers.
+Extracting data from simulation data sets is typically performed with
+analysis software like `MDAnalysis<https://github.com/MDAnalysis/mdanalysis>`__, 
+`LOOS<http://loos.sourceforge.net/>`__, `VMD<http://www.ks.uiuc.edu/Research/vmd/>`__,
+`MDTraj<https://github.com/mdtraj/mdtraj>`__, or other simulation package utilities.
 
 It is the aim of this package to provide a higher level organizational framework
-for molecular dynamics analysis that encompasses various simulation packages
-and stores data in a unified format. It is not the aim of this package to
-provide yet another molecular dynamics analysis library (YAMDAP), but rather
-to provide a suggested "best practice" when performing analysis that stands to
-improve consistency and reproducibility with respect to the execution of
-analysis. But let's be honest here, Below the surface, MDGenesis is nothing more
-than a glorified wrapper around `MDSynthesis<https://github.com/Becksteinlab/MDSynthesis>`__ 
-(but it might be something more someday!).
+for executing molecular dynamics analysis that supports many analysis packages
+(assuming they have a python interface) and stores resulting data in a unified
+manner. It is not the aim of this package to be "yet another molecular dynamics
+analysis library" (YAMDAP), but rather to provide a wrapper around any analysis
+performed in post-processing (after the trajectory data has been output to disk).
 
 Benefits of Wrapping your Analysis
 ==================================
@@ -34,6 +31,14 @@ include the following:
 * Fault-tolerant analysis (recovery from crashed analysis)
 * Auto-population of analysis across datasets (new analysis, update for all data)
 * Persistent analysis (daemon-mode, MDGenesis sniffs out and analyzes new data)
+
+Shout Outs
+==========
+
+Let's be honest here, below the thin veil of README jargon and empty promises,
+MDGenesis is nothing more than a glorified wrapper around 
+`MDSynthesis<https://github.com/Becksteinlab/MDSynthesis>`__.
+Thanks to David Dotson for creating it!
 
 The principle behind this package and several analysis routines are taken
 directly from the library `Batcha<https://github.com/davecap/batcha>`__.
