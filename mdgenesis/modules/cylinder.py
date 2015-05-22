@@ -1,5 +1,4 @@
 # Cylinder analysis class
-import MDAnalysis.KDTree.NeighborSearch as ns
 import numpy as np
 #import numpy.linalg
 
@@ -58,21 +57,22 @@ class CylinderHistogram(PerFrameAnalysis):
         self._update_selections()
         self._frames_processed += 1.0
 
-        solute_in_sphere = set(self._solutesearch.search(self._midpoint,
-                                                         self._sradius,
-                                                         level="R"))
-
+        #cylinder_waters = []
         solute_axis_within_cylinder = []
         # This is a processing step where we embed a cylinder within the sphere
         # that connects the top and bottom points (no matter what angle it is).
         # Keep in mind that solute center of mass is used no matter what the
         # selection is (since it happens on the residue level)
-        for solute in solute_in_sphere:
-            s_com = solute.centerOfMass()
+        #for solute in solute_in_sphere:
+        for solute in self._solute:
+            s_com = solute.pos
             s_com_wrt_ref = s_com - self._ref_com
             s_dist_to_cylinder_axis = np.linalg.norm(np.cross(s_com - self._top_com, s_com - self._bottom_com))
             if s_dist_to_cylinder_axis/self._height <= self.radius:
                 solute_axis_within_cylinder.append(s_com_wrt_ref[self.soluteaxis])
+                #cylinder_waters.append(solute.resid)
+
+        #print " ".join([str(x) for x in cylinder_waters])
 
         self._all_histograms += np.histogram(np.array(solute_axis_within_cylinder),
                                              range=np.array([self.histmin, self.histmax]),
@@ -94,4 +94,3 @@ class CylinderHistogram(PerFrameAnalysis):
         self._sradius = (self._height/2) + self.extension
 
         self._solute = self.u.selectAtoms(self.solutesel)
-        self._solutesearch = ns.AtomNeighborSearch(self._solute)
