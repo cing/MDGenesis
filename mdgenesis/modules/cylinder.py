@@ -1,6 +1,6 @@
 # Cylinder analysis class
 import numpy as np
-#import numpy.linalg
+from numpy.linalg import norm
 
 from analysis import PerFrameAnalysis
 
@@ -40,9 +40,9 @@ class CylinderHistogram(PerFrameAnalysis):
         self.bottomsel = bottomsel
         self.solutesel = solutesel
         self.refsel = refsel
-        self.radius = radius
+        self.r = radius
         self.extension = extension
-        self.soluteaxis = soluteaxis
+        self.saxis = soluteaxis
 
         self.histbins = histbins
         self.histmin = histmin
@@ -57,26 +57,20 @@ class CylinderHistogram(PerFrameAnalysis):
         self._update_selections()
         self._frames_processed += 1.0
 
-        #cylinder_waters = []
-        solute_axis_within_cylinder = []
-        # This is a processing step where we embed a cylinder within the sphere
-        # that connects the top and bottom points (no matter what angle it is).
-        # Keep in mind that solute center of mass is used no matter what the
-        # selection is (since it happens on the residue level)
-        #for solute in solute_in_sphere:
-        for solute in self._solute:
-            s_com = solute.pos
-            s_com_wrt_ref = s_com - self._ref_com
-            s_dist_to_cylinder_axis = np.linalg.norm(np.cross(s_com - self._top_com, s_com - self._bottom_com))
-            if s_dist_to_cylinder_axis/self._height <= self.radius:
-                solute_axis_within_cylinder.append(s_com_wrt_ref[self.soluteaxis])
-                #cylinder_waters.append(solute.resid)
+        # distance to the helix axis defined by top_com and bottom_com
+        d = norm(np.cross(self._scoord - self._top_com,
+                          self._scoord - self._bottom_com),
+                 axis=1)/self._height
 
-        #print " ".join([str(x) for x in cylinder_waters])
+        # boolean mask for distances below the radius, hist'd on solute-axis
+        h = np.histogram(self._scoord[d <= self.r][:,self.saxis] - self._ref_com[self.saxis],
+                         range=np.array([self.histmin, self.histmax]),
+                         bins=np.array(self.histbins), normed=False)[0]
 
-        self._all_histograms += np.histogram(np.array(solute_axis_within_cylinder),
-                                             range=np.array([self.histmin, self.histmax]),
-                                             bins=np.array(self.histbins), normed=False)[0]
+        # optionally output the resids of solute in cylinder (useful for VMD)
+        #print self._sids[dist <= self.radius]
+
+        self._all_histograms += h
 
     def results(self):
         if self._frames_processed > 0:
@@ -93,4 +87,5 @@ class CylinderHistogram(PerFrameAnalysis):
         self._height = np.linalg.norm(self._top_com-self._bottom_com)
         self._sradius = (self._height/2) + self.extension
 
-        self._solute = self.u.selectAtoms(self.solutesel)
+        #self._sids = np.array([sol.resid for sol in self.u.selectAtoms(self.solutesel)])
+        self._scoord = self.u.selectAtoms(self.solutesel).coordinates()
