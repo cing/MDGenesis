@@ -21,27 +21,28 @@ class PerFrameAnalysis(object):
 
         pass
 
-    def run(self, trj):
-        """ Analyze trajectory and produce timeseries. """
+    def run(self, trj, frames_processed=0, intdata=None):
+        """ Analyze trajectory and produce timeseries. Use when you don't
+            care about saving intermediate data during long calculations
+            otherwise loop the trajectory and process for each frame then call
+            results.
+        """
         self.framedata = []
-        self.prepare(trj=trj, ref=ref)
+        self.prepare(trj=trj, ref=ref, frames_processed=frames_processed, int_data=int_data)
         for ts in self.u.trajectory:
             logger.debug("Analyzing frame %d" % ts.frame)
             self.process(ts.frame)
         return self.framedata
 
-    def prepare(self, trj=None, ref=None):
+    def prepare(self, trj=None, ref=None, frames_processed=0, intdata=None):
         """ Prepare the trajectory (trj is a Universe object). No reference object is needed. """
         self.u = trj
         self.ref = ref
         #self.u.trajectory.rewind()
         self._update_selections()  # Is this EVER needed?
-        self.frames_processed = 0
+        self.frames_processed = frames_processed
+        self.intdata = intdata
         self.framedata = []  # final result
-
-    def results(self):
-        """ Returns an array containing the total count of nearby atoms """
-        return numpy.array(self.framedata)
 
     def process(self, frame):
         """ Process a single trajectory frame """
@@ -49,6 +50,14 @@ class PerFrameAnalysis(object):
 
     def _update_selections(self):
         pass
+
+    def results(self):
+        """ Returns an array of your analysis """
+        return numpy.array(self.framedata)
+
+    def intresults(self):
+        """ Returns an array of intermediate data """
+        return numpy.array(self.intdata)
 
 class AllAtOnceAnalysis(object):
     """ Base class for analysis that runs all at once without
@@ -67,7 +76,7 @@ class AllAtOnceAnalysis(object):
         pass
 
     def run(self, trj, ref=None):
-        """ Analyze trajectory and produce timeseries. """
+        """ Analyze trajectory and return results array. """
         self.framedata = []
         self.prepare(trj=trj, ref=ref)
         return self.results()
@@ -86,9 +95,12 @@ class AllAtOnceAnalysis(object):
     def process(self, frame):
         raise NotImplementedError()
 
-    def results(self):
-        """ Returns an array containing the total count of nearby atoms """
-        return numpy.array(self.framedata)
-
     def _update_selections(self):
         pass
+
+   def results(self):
+        """ Returns an array of your analysis """
+        return numpy.array(self.framedata)
+
+    def intresults(self):
+        raise NotImplementedError()
