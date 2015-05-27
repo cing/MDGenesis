@@ -24,8 +24,7 @@ class PerFrameAnalysis(object):
     def run(self, trj, frames_processed=0, intdata=None):
         """ Analyze trajectory and produce timeseries. Use when you don't
             care about saving intermediate data during long calculations
-            otherwise loop the trajectory and process for each frame then call
-            results.
+            or only analyzing a subset of frames.
         """
         self.framedata = []
         self.prepare(trj=trj, ref=ref, frames_processed=frames_processed, int_data=int_data)
@@ -34,9 +33,13 @@ class PerFrameAnalysis(object):
             self.process(ts.frame)
         return self.framedata
 
-    def prepare(self, trj=None, ref=None, frames_processed=0, intdata=None):
+    def prepare(self, trj=None, start=0, stop=-1,
+                ref=None, frames_processed=0, intdata=None):
         """ Prepare the trajectory (trj is a Universe object). No reference object is needed. """
-        self.u = trj
+        if stop != -1:
+            self.u = trj[start:stop]
+        else:
+            self.u = traj[start:]
         self.ref = ref
         #self.u.trajectory.rewind()
         self._update_selections()  # Is this EVER needed?
