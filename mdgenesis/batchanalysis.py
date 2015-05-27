@@ -44,27 +44,27 @@ class BatchAnalysis():
     def add_allatonce(self, path, processor, synchronize=False):
         self._allatonce[path] = (processor, synchronize)
 
-    def run(self, trj, ref, start=0, stop=-1, skip=1, checkpoint=1000):
+    def run(self, trj, ref, start=0, stop=-1, skip=1, checkpoint=0):
         '''This executes all loaded analysis types'''
         self._trj = trj
         self._ref = ref
 
         if len(self._dcd_timeseries) > 0:
             print "Starting timeseries analysis..."
-            run_dcd_timeseries(start=start, stop=stop, skip=skip)
+            self.run_dcd_timeseries(start, stop, skip=skip)
             print "Done timeseries analysis."
 
         if len(self._sequential) > 0:
             print "Running sequential analyses..."
-            run_sequential_analysis(start=start, stop=stop, skip=skip, checkpoint=checkpoint)
+            self.run_sequential_analysis(start, stop, skip=skip, checkpoint=checkpoint)
             print "Done sequential analysis."
 
         if len(self._allatonce) > 0:
             print "Running all at once analyses..."
-            run_allatonce_analysis(start=start, stop=stop, skip=skip)
+            self.run_allatonce_analysis(start, stop, skip=skip)
             print "Done all-at-once analysis."
 
-    def run_dcd_timeseries(start, stop, skip):
+    def run_dcd_timeseries(self, start, stop, skip=1):
         collection.clear()
         for path, tpl in self._dcd_timeseries.items():
             print " Adding timeseries: %s" % path
@@ -79,7 +79,7 @@ class BatchAnalysis():
             print " loading table %s with %d values..." % (path, len(collection[i][0]))
             self.sim.data.add(path, collection[i][0])
 
-    def run_sequential_analysis(start, stop, skip):
+    def run_sequential_analysis(self, start, stop, skip=1, checkpoint=0):
 
         existing_data = {}
         for path, tpl in self._sequential.items():
@@ -94,8 +94,12 @@ class BatchAnalysis():
 
         #print " Processing %d frames..." % frames.numframes
         for i, f in enumerate(frames):
-            if i % 10 == 0:
-                print ".",
+            if checkpoint != 0:
+                if i % checkpoint == 0:
+                    print ".",
+                    self.sim.data.add(path+".checkpoint", tpl[0].intresults())
+                    self.sim.data.add(path+".frames_processed", np.array(tpl[0].frames_processed))
+
             for path, tpl in self._sequential.items():
                 # if tpl[1] is True, check if frame needs to be analyzed
                 # otherwise, just analyze
@@ -117,7 +121,7 @@ class BatchAnalysis():
             else:
                 print "Nothing done, file is complete!"
 
-    def run_allatonce_analysis(start, stop, skip):
+    def run_allatonce_analysis(self, start, stop, skip=1):
 
        existing_data = {}
        for path, tpl in self._allatonce.items():
