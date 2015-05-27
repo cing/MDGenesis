@@ -17,6 +17,18 @@ class BatchAnalysis():
         self.sim = self.open_or_create(universe)
         self.reset()
 
+    def open_or_create(self, universe=None):
+        """ 
+        Create the MDSynthesis Sim instance, with or without an MDAnalysis
+        universe list of ['path/to/topology', 'path/to/trajectory']
+        """
+        #TODO: Store categories during creation that correspond to the
+        #      types of analysis performed (?)
+        if universe is not None:
+            return mds.Sim(self._simname, universe=universe) 
+        else:
+            return mds.Sim(self._simname)
+
     def reset(self):
         # the following dicts store the actual analyses which are processed
         self._sequential = {}
@@ -125,14 +137,3 @@ class BatchAnalysis():
            else:
                print "Nothing done, file is complete!"
 
-    def open_or_create(self, universe=None):
-        """ 
-        Create the MDSynthesis Sim instance, with or without an MDAnalysis
-        universe list of ['path/to/topology', 'path/to/trajectory']
-        """
-        #TODO: Store categories during creation that correspond to the
-        #      types of analysis performed (?)
-        if universe is not None:
-            return mds.Sim(self._simname, universe=universe) 
-        else:
-            return mds.Sim(self._simname)
