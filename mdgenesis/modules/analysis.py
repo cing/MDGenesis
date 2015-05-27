@@ -39,7 +39,7 @@ class PerFrameAnalysis(object):
         if stop != -1:
             self.u = trj[start:stop]
         else:
-            self.u = traj[start:]
+            self.u = trj[start:]
         self.ref = ref
         #self.u.trajectory.rewind()
         self._update_selections()  # Is this EVER needed?
@@ -89,7 +89,7 @@ class AllAtOnceAnalysis(object):
         if stop != -1:
             self.u = trj[start:stop]
         else:
-            self.u = traj[start:]
+            self.u = trj[start:]
         self.ref = ref
         #self.u.trajectory.rewind()  # Is this EVER needed?
         self._update_selections()
@@ -101,7 +101,7 @@ class AllAtOnceAnalysis(object):
     def _update_selections(self):
         pass
 
-   def results(self):
+    def results(self):
         """ Returns an array of your analysis """
         return numpy.array(self.framedata)
 
