@@ -36,6 +36,7 @@ class PerFrameAnalysis(object):
         self.ref = ref
         #self.u.trajectory.rewind()
         self._update_selections()  # Is this EVER needed?
+        self.frames_processed = 0
         self.framedata = []  # final result
 
     def results(self):
@@ -52,7 +53,7 @@ class PerFrameAnalysis(object):
 class AllAtOnceAnalysis(object):
     """ Base class for analysis that runs all at once without
     explicit iteration over the frames of the set. Most analysis done using
-    MDTraj should use this approach.
+    MDTraj should use this approach. These modules are not fault-tolerant.
     """
 
     def __init__(self):

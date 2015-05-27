@@ -99,7 +99,7 @@ class RMSF(PerFrameAnalysis):
     def results(self):
         """ Post-processing is needed to return the results since they are not
             appended. """
-        f = self._used_frames
+        f = self.frames_processed
         ci = self._coordinate_indices
 
         if len(ci) > 0:
@@ -110,7 +110,7 @@ class RMSF(PerFrameAnalysis):
                            (self._coord_sum/f)**2).sum(1))
 
     def process(self,ts):
-        self._used_frames += 1
+        self.frames_processed += 1
         self._coord_sum += self._selection.coordinates()
         self._coord_sqsum += self._selection.coordinates()**2
 

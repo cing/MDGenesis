@@ -48,14 +48,13 @@ class CylinderHistogram(PerFrameAnalysis):
         self.histmin = histmin
         self.histmax = histmax
 
-        self._frames_processed = 0.0
         self._all_histograms = np.zeros(histbins, dtype=np.uint64)
         self._all_edges = np.linspace(histmin, histmax, num=histbins)
 
     def process(self, frame):
         """ Process a single trajectory frame """
         self._update_selections()
-        self._frames_processed += 1.0
+        self.frames_processed += 1
 
         # distance to the helix axis defined by top_com and bottom_com
         d = norm(np.cross(self._scoord - self._top_com,
@@ -74,7 +73,7 @@ class CylinderHistogram(PerFrameAnalysis):
 
     def results(self):
         if self._frames_processed > 0:
-            return np.array(self._all_histograms)/self._frames_processed
+            return np.array(self._all_histograms)/float(self.frames_processed)
         else:
             return np.array(self._all_histograms)
 
