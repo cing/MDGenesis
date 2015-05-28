@@ -22,9 +22,13 @@ Benefits of Wrapping your Analysis
 ==================================
 
 MDGenesis is an analysis wrapper that aims to provide a higher level
-interface for executing analysis modules of all varieties. While it currently
-offers no benefits other than organizational ones, future functionality may
-include the following:
+interface for executing analysis modules of all varieties. While it primarily
+offers organizational benefits, it does support:
+
+* Storage of intermediate analysis (at a defined checkpoint interval)
+* Loading of intermediate analysis and resuming incomplete calculations..
+
+Future functionality may include the following:
 
 * Parallelism using analysis batches (analysis #1 on CPU1, analysis #2 on CPU2)
 * Parallelism using chunked analysis (frames 0-10 on CPU1, frames 10-20 on CPU2)
