@@ -13,4 +13,4 @@ class DSSP(AllAtOnceAnalysis):
         return self.framedata
 
     def _update_selections(self):
-        self._selection = [res.index for res in self.u.topology.residues if res.is_protein]
+        self._selection = [res.index for res in self.traj.topology.residues if res.is_protein]

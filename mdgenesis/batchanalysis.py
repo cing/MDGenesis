@@ -44,9 +44,10 @@ class BatchAnalysis():
     def add_allatonce(self, path, processor, synchronize=False):
         self._allatonce[path] = (processor, synchronize)
 
-    def run(self, trj, ref, start=0, stop=-1, skip=1, checkpoint=0):
+    def run(self, trj, u=None, ref=None, start=0, stop=-1, skip=1, checkpoint=0):
         '''This executes all loaded analysis types'''
         self._trj = trj
+        self._u = u
         self._ref = ref
 
         if len(self._dcd_timeseries) > 0:
@@ -71,7 +72,7 @@ class BatchAnalysis():
             collection.addTimeseries(tpl)
 
         print " Computing..."
-        collection.compute(self._trj.trajectory, start=start, stop=stop, skip=skip)
+        collection.compute(self._u, start=start, stop=stop, skip=skip)
         print " Done computing."
 
         print "Loading data..."
@@ -84,21 +85,32 @@ class BatchAnalysis():
         existing_data = {}
         for path, tpl in self._sequential.items():
             print " Preparing %s" % path
-            tpl[0].prepare(ref=self._ref, trj=self._trj)
             existing_data[path] = self.sim.data.retrieve(path)
 
+            # Prepare the analysis module from a checkpoint or for the first time
+            if (path+"/checkpoint" in self.sim.data) and (path+"/framecount" in self.sim.data):
+                print "Found checkpoint: ", self.sim.data[path+"/checkpoint"]
+                print "Found frames: ", self.sim.data[path+"/framecount"]
+                tpl[0].prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop,
+                               intdata=self.sim.data[path+"/checkpoint"],
+                               frames_processed=self.sim.data[path+"/framecount"])
+            else:
+                tpl[0].prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop)
+
         if stop != -1:
-            frames = self._trj.trajectory[start:stop]
+            frames = self._trj[start:stop]
         else:
-            frames = self._trj.trajectory[start:]
+            frames = self._trj[start:]
 
         #print " Processing %d frames..." % frames.numframes
         for i, f in enumerate(frames):
+            # TODO: throw error if trajectory actually doesn't support checkpoints
             if checkpoint != 0:
-                if i % checkpoint == 0:
+                if i % checkpoint == 0 and i > 0:
                     print ".",
-                    self.sim.data.add(path+".checkpoint", tpl[0].intresults())
-                    self.sim.data.add(path+".frames_processed", np.array(tpl[0].frames_processed))
+                    print path+"/checkpoint", tpl[0].intresults(), tpl[0].framecount()
+                    self.sim.data[path+"/checkpoint"] = tpl[0].intresults()
+                    self.sim.data[path+"/framecount"] = tpl[0].framecount()
 
             for path, tpl in self._sequential.items():
                 # if tpl[1] is True, check if frame needs to be analyzed
@@ -126,7 +138,7 @@ class BatchAnalysis():
        existing_data = {}
        for path, tpl in self._allatonce.items():
            print " Preparing %s" % path
-           tpl[0].prepare(ref=self._ref, trj=self._trj, start=start, stop=stop)
+           tpl[0].prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop)
            existing_data[path] = self.sim.data.retrieve(path)
 
        print " Computing/Loading result data..."

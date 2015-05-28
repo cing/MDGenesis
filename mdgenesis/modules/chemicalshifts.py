@@ -14,7 +14,7 @@ class ShiftX2(AllAtOnceAnalysis):
         self._atom_selection = atom_selection
 
     def results(self):
-        temp_results = md.nmr.chemical_shifts_shiftx2(self.u[::self._skip],
+        temp_results = md.nmr.chemical_shifts_shiftx2(self.traj[::self._skip],
                                                       pH=self._ph,
                                                       temperature=self._temp)
 

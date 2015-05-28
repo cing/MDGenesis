@@ -48,8 +48,17 @@ class CylinderHistogram(PerFrameAnalysis):
         self.histmin = histmin
         self.histmax = histmax
 
-        self._all_histograms = np.zeros(histbins, dtype=np.uint64)
-        self._all_edges = np.linspace(histmin, histmax, num=histbins)
+        #self._all_edges = np.linspace(histmin, histmax, num=histbins)
+
+    def _loadcheckpoint(self, frames_processed, intdata):
+        if intdata == None:
+            self.frames_processed = 0
+            self.intdata = np.zeros(self.histbins, dtype=np.uint64)
+        else:
+            # 0-index is needed because we're storing a 1x1 numpy array
+            # but using an integer in the method.
+            self.frames_processed = int(frames_processed[0])
+            self.intdata = intdata
 
     def process(self, frame):
         """ Process a single trajectory frame """
@@ -69,13 +78,13 @@ class CylinderHistogram(PerFrameAnalysis):
         # optionally output the resids of solute in cylinder (useful for VMD)
         #print self._sids[dist <= self.radius]
 
-        self._all_histograms += h
+        self.intdata += h
 
     def results(self):
-        if self._frames_processed > 0:
-            return np.array(self._all_histograms)/float(self.frames_processed)
+        if self.frames_processed > 0:
+            return np.array(self.intdata)/float(self.frames_processed)
         else:
-            return np.array(self._all_histograms)
+            return np.array(self.intdata)
 
     def _update_selections(self):
         self._top_com = self.u.selectAtoms(self.topsel).centerOfMass()

@@ -3,7 +3,7 @@ Base class for Analysis, the components of BatchAnalysis.
 
 """
 
-import numpy
+import numpy as np
 
 class PerFrameAnalysis(object):
     """ Base class for analysis that runs independently on each step
@@ -21,30 +21,36 @@ class PerFrameAnalysis(object):
 
         pass
 
-    def run(self, trj, frames_processed=0, intdata=None):
+    def run(self, trj, u=None, frames_processed=0, intdata=None):
         """ Analyze trajectory and produce timeseries. Use when you don't
             care about saving intermediate data during long calculations
             or only analyzing a subset of frames.
         """
         self.framedata = []
-        self.prepare(trj=trj, ref=ref, frames_processed=frames_processed, int_data=int_data)
-        for ts in self.u.trajectory:
+        self.prepare(trj=trj, u=u, ref=ref,
+                     frames_processed=frames_processed, intdata=intdata)
+        for frame in self.trj:
             logger.debug("Analyzing frame %d" % ts.frame)
-            self.process(ts.frame)
+            self.process(frame)
         return self.framedata
 
-    def prepare(self, trj=None, start=0, stop=-1,
+    def prepare(self, trj, u=None, start=0, stop=-1,
                 ref=None, frames_processed=0, intdata=None):
-        """ Prepare the trajectory (trj is a Universe object). No reference object is needed. """
+        """ Prepares the analysis routine and loads intermediate data
+            if it exists. trj must be an iterable made outside of MDGenesis """
+
+        self._loadcheckpoint(frames_processed, intdata)
+        if self.frames_processed > 0:
+            start = self.frames_processed
+            print "Starting at frame:", start
+
         if stop != -1:
-            self.u = trj[start:stop]
+            self.trj = trj[start:stop]
         else:
-            self.u = trj[start:]
+            self.trj = trj[start:]
+        self.u = u
         self.ref = ref
-        #self.u.trajectory.rewind()
-        self._update_selections()  # Is this EVER needed?
-        self.frames_processed = frames_processed
-        self.intdata = intdata
+
         self.framedata = []  # final result
 
     def process(self, frame):
@@ -54,13 +60,21 @@ class PerFrameAnalysis(object):
     def _update_selections(self):
         pass
 
+    def _loadcheckpoint(self, frames_processed, intdata):
+        self.frames_processed = frames_processed
+        self.intdata = intdata
+
     def results(self):
         """ Returns an array of your analysis """
-        return numpy.array(self.framedata)
+        return np.array(self.framedata)
 
     def intresults(self):
         """ Returns an array of intermediate data """
-        return numpy.array(self.intdata)
+        return np.array(self.intdata)
+
+    def framecount(self):
+        """ Returns the number of frames processed """
+        return np.array([self.frames_processed])
 
 class AllAtOnceAnalysis(object):
     """ Base class for analysis that runs all at once without
@@ -78,18 +92,20 @@ class AllAtOnceAnalysis(object):
 
         pass
 
-    def run(self, trj, ref=None):
+    def run(self, trj, u=None, ref=None):
         """ Analyze trajectory and return results array. """
         self.framedata = []
-        self.prepare(trj=trj, ref=ref)
+        self.prepare(trj=trj, u=u, ref=ref)
         return self.results()
 
-    def prepare(self, trj=None, ref=None, start=0, stop=-1):
-        """ Prepare the trajectory (trj is a Universe object). No reference object is needed. """
+    def prepare(self, trj, u=None, ref=None, start=0, stop=-1):
+        """ Prepares the analysis routine and loads intermediate data
+            if it exists. trj must be an iterable made outside of MDGenesis """
         if stop != -1:
-            self.u = trj[start:stop]
+            self.trj = trj[start:stop]
         else:
-            self.u = trj[start:]
+            self.trj = trj[start:]
+        self.u = u
         self.ref = ref
         #self.u.trajectory.rewind()  # Is this EVER needed?
         self._update_selections()
@@ -103,7 +119,7 @@ class AllAtOnceAnalysis(object):
 
     def results(self):
         """ Returns an array of your analysis """
-        return numpy.array(self.framedata)
+        return np.array(self.framedata)
 
     def intresults(self):
         raise NotImplementedError()
