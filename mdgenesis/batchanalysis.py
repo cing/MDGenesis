@@ -1,5 +1,5 @@
 from MDAnalysis import collection
-#import numpy as np
+import numpy as np
 #import pandas as pd
 import mdsynthesis as mds
 
@@ -78,7 +78,8 @@ class BatchAnalysis():
         print "Loading data..."
         for i, path in enumerate(self._dcd_timeseries.keys()):
             print " loading table %s with %d values..." % (path, len(collection[i][0]))
-            self.sim.data.add(path, collection[i][0])
+            self.sim.data[path] = collection[i][0]
+            self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, -1, -1])
 
     def run_sequential_analysis(self, start, stop, skip=1, checkpoint=0):
 
@@ -88,12 +89,21 @@ class BatchAnalysis():
             existing_data[path] = self.sim.data.retrieve(path)
 
             # Prepare the analysis module from a checkpoint or for the first time
-            if (path+"/checkpoint" in self.sim.data) and (path+"/framecount" in self.sim.data):
-                print "Found checkpoint: ", self.sim.data[path+"/checkpoint"]
-                print "Found frames: ", self.sim.data[path+"/framecount"]
-                tpl[0].prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop,
-                               intdata=self.sim.data[path+"/checkpoint"],
-                               frames_processed=self.sim.data[path+"/framecount"])
+            if (path+"/checkpoint" in self.sim.data) and (path+"/analysis_stats" in self.sim.data):
+                cstart, cstop, cskip, ccheckpoint, cframecount = self.sim.data[path+"/analysis_stats"]
+                print "Analysis stats: ", cstart, cstop, cskip, cframecount
+
+                if cstart != start or cskip != skip or cstop > stop or ccheckpoint != checkpoint:
+                    print "Trying checkpoint but failed due to start/stop/skip"
+                    print "Initiating a REDO with the current start/stop/skip!"
+                    tpl[0].prepare(self._trj, u=self._u,
+                                   ref=self._ref, start=start, stop=stop)
+                else:
+                    print "Found checkpoint: ", self.sim.data[path+"/checkpoint"]
+                    tpl[0].prepare(self._trj, u=self._u, ref=self._ref,
+                                   start=start+int(cframecount), stop=stop,
+                                   intdata=self.sim.data[path+"/checkpoint"],
+                                   frames_processed=int(cframecount))
             else:
                 tpl[0].prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop)
 
@@ -110,7 +120,8 @@ class BatchAnalysis():
                     print ".",
                     print path+"/checkpoint", tpl[0].intresults(), tpl[0].framecount()
                     self.sim.data[path+"/checkpoint"] = tpl[0].intresults()
-                    self.sim.data[path+"/framecount"] = tpl[0].framecount()
+                    self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, checkpoint,
+                                                             tpl[0].framecount()])
 
             for path, tpl in self._sequential.items():
                 # if tpl[1] is True, check if frame needs to be analyzed
@@ -140,6 +151,7 @@ class BatchAnalysis():
            print " Preparing %s" % path
            tpl[0].prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop)
            existing_data[path] = self.sim.data.retrieve(path)
+           self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, -1, -1])
 
        print " Computing/Loading result data..."
        for path, tpl in self._allatonce.items():

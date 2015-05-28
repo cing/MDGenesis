@@ -57,7 +57,7 @@ class CylinderHistogram(PerFrameAnalysis):
         else:
             # 0-index is needed because we're storing a 1x1 numpy array
             # but using an integer in the method.
-            self.frames_processed = int(frames_processed[0])
+            self.frames_processed = frames_processed
             self.intdata = intdata
 
     def process(self, frame):

@@ -40,9 +40,6 @@ class PerFrameAnalysis(object):
             if it exists. trj must be an iterable made outside of MDGenesis """
 
         self._loadcheckpoint(frames_processed, intdata)
-        if self.frames_processed > 0:
-            start = self.frames_processed
-            print "Starting at frame:", start
 
         if stop != -1:
             self.trj = trj[start:stop]
@@ -74,7 +71,7 @@ class PerFrameAnalysis(object):
 
     def framecount(self):
         """ Returns the number of frames processed """
-        return np.array([self.frames_processed])
+        return self.frames_processed
 
 class AllAtOnceAnalysis(object):
     """ Base class for analysis that runs all at once without
