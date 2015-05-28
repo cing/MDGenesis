@@ -38,13 +38,13 @@ class BatchAnalysis():
     def add_dcd_timeseries(self, path, timeseries):
         self._dcd_timeseries[path] = (timeseries)
 
-    def add_to_sequence(self, path, processor, synchronize=False):
-        self._sequential[path] = (processor, synchronize)
+    def add_to_sequence(self, path, processor, synchronize=False, checkpoint=0):
+        self._sequential[path] = (processor, synchronize, checkpoint)
 
     def add_allatonce(self, path, processor, synchronize=False):
         self._allatonce[path] = (processor, synchronize)
 
-    def run(self, trj, u=None, ref=None, start=0, stop=-1, skip=1, checkpoint=0):
+    def run(self, trj, u=None, ref=None, start=0, stop=-1, skip=1):
         '''This executes all loaded analysis types'''
         self._trj = trj
         self._u = u
@@ -57,7 +57,7 @@ class BatchAnalysis():
 
         if len(self._sequential) > 0:
             print "Running sequential analyses..."
-            self.run_sequential_analysis(start, stop, skip=skip, checkpoint=checkpoint)
+            self.run_sequential_analysis(start, stop, skip=skip)
             print "Done sequential analysis."
 
         if len(self._allatonce) > 0:
@@ -81,15 +81,20 @@ class BatchAnalysis():
             self.sim.data[path] = collection[i][0]
             self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, -1, -1])
 
-    def run_sequential_analysis(self, start, stop, skip=1, checkpoint=0):
+    def run_sequential_analysis(self, start, stop, skip=1):
 
         existing_data = {}
+        existing_start_stops = {}
+
         for path, tpl in self._sequential.items():
             print " Preparing %s" % path
             existing_data[path] = self.sim.data.retrieve(path)
+            sync = tpl[1]
+            checkpoint = tpl[2]
 
-            # Prepare the analysis module from a checkpoint or for the first time
-            if (path+"/checkpoint" in self.sim.data) and (path+"/analysis_stats" in self.sim.data):
+            # Initialize an analysis module from the start or resume it at a
+            # later time if a checkpoint or synchronization flag has been set.
+            if sync and (path+"/checkpoint" in self.sim.data) and (path+"/analysis_stats" in self.sim.data):
                 cstart, cstop, cskip, ccheckpoint, cframecount = self.sim.data[path+"/analysis_stats"]
                 print "Analysis stats: ", cstart, cstop, cskip, cframecount
 
@@ -98,39 +103,40 @@ class BatchAnalysis():
                     print "Initiating a REDO with the current start/stop/skip!"
                     tpl[0].prepare(self._trj, u=self._u,
                                    ref=self._ref, start=start, stop=stop)
+                    existing_start_stops[path] = (start,stop)
                 else:
                     print "Found checkpoint: ", self.sim.data[path+"/checkpoint"]
                     tpl[0].prepare(self._trj, u=self._u, ref=self._ref,
-                                   start=start+int(cframecount), stop=stop,
+                                   start=start+int(cframecount)+1, stop=stop,
                                    intdata=self.sim.data[path+"/checkpoint"],
                                    frames_processed=int(cframecount))
+                    existing_start_stops[path] = (start+int(cframecount)+1,stop)
             else:
                 tpl[0].prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop)
+                existing_start_stops[path] = (start,stop)
 
-        if stop != -1:
-            frames = self._trj[start:stop]
-        else:
-            frames = self._trj[start:]
+        # We have to reslice the trajectory in case we are checkpointing/synching
+        # a previous run that had a different start/skip/stop time.
+        for path, tpl in self._sequential.items():
+            start, stop = existing_start_stops[path]
+            if stop != -1:
+                frames = self._trj[start:stop]
+            else:
+                frames = self._trj[start:]
 
-        #print " Processing %d frames..." % frames.numframes
-        for i, f in enumerate(frames):
-            # TODO: throw error if trajectory actually doesn't support checkpoints
-            if checkpoint != 0:
-                if i % checkpoint == 0 and i > 0:
-                    print ".",
-                    print path+"/checkpoint", tpl[0].intresults(), tpl[0].framecount()
-                    self.sim.data[path+"/checkpoint"] = tpl[0].intresults()
-                    self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, checkpoint,
-                                                             tpl[0].framecount()])
+            #print " Processing %d frames..." % frames.numframes
+            for i, f in enumerate(frames):
+                current_frame = i + start
+                # TODO: throw error if trajectory actually doesn't support checkpoints
+                if checkpoint != 0:
+                    if current_frame % checkpoint == 0 and i > 0:
+                        print ".",
+                        print path+"/checkpoint", tpl[0].intresults(), tpl[0].framecount()
+                        self.sim.data[path+"/checkpoint"] = tpl[0].intresults()
+                        self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, checkpoint,
+                                                                 tpl[0].framecount()])
+                tpl[0].process(f)
 
-            for path, tpl in self._sequential.items():
-                # if tpl[1] is True, check if frame needs to be analyzed
-                # otherwise, just analyze
-                if tpl[1] and existing_data[path] is not None:
-                    if i >= existing_data[path].shape[0]:
-                        tpl[0].process(f)
-                else:
-                    tpl[0].process(f)
         print " done."
 
         print " Loading result data..."

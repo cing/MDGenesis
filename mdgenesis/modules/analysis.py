@@ -34,7 +34,7 @@ class PerFrameAnalysis(object):
             self.process(frame)
         return self.framedata
 
-    def prepare(self, trj, u=None, start=0, stop=-1,
+    def prepare(self, trj, u=None, start=0, stop=-1, skip=0,
                 ref=None, frames_processed=0, intdata=None):
         """ Prepares the analysis routine and loads intermediate data
             if it exists. trj must be an iterable made outside of MDGenesis """
@@ -95,7 +95,7 @@ class AllAtOnceAnalysis(object):
         self.prepare(trj=trj, u=u, ref=ref)
         return self.results()
 
-    def prepare(self, trj, u=None, ref=None, start=0, stop=-1):
+    def prepare(self, trj, u=None, ref=None, start=0, stop=-1, skip=0):
         """ Prepares the analysis routine and loads intermediate data
             if it exists. trj must be an iterable made outside of MDGenesis """
         if stop != -1:
