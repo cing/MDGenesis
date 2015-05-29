@@ -98,24 +98,36 @@ class BatchAnalysis():
 
             # Initialize an analysis module from the start or resume it at a
             # later time if a checkpoint or synchronization flag has been set.
-            if (analysis.sync and (path+"/checkpoint" in self.sim.data) and
-               (path+"/analysis_stats" in self.sim.data)):
+            if (analysis.sync and (path+"/analysis_stats" in self.sim.data)):
                 cstart, cstop, cskip, ccheckpoint, cframecount = self.sim.data[path+"/analysis_stats"]
-                print "Analysis stats: ", cstart, cstop, cskip, cframecount
+                print "Start/Stop/Skip/FC in analysis_stats: ", cstart, cstop, cskip, cframecount
 
+                # Have there been changes in this execution versus the last time?
                 if (cstart != start or cskip != skip or cstop > stop or
-                   ccheckpoint != analysis.checkpoint):
-                    print "Trying checkpoint but failed due to start/stop/skip"
-                    print "Initiating a REDO with the current start/stop/skip!"
-                    analysis.func.prepare(self._trj, u=self._u,
-                                   ref=self._ref, start=start, stop=stop)
+                    ccheckpoint != analysis.checkpoint):
+                    print "Detected difference in start/stop/skip/checkpoint"
+                    print "Gotta restart from t=0, hope you don't mind!"
+                    analysis.func.prepare(self._trj, u=self._u, ref=self._ref,
+                                          start=start, stop=stop)
                     existing_start_stops[path] = (start,stop)
+
                 else:
+                    # Load intermediate data and framedata if it exists!
+                    framedata_arg = []
+                    intdata_arg = []
+                    if (path in self.sim.data):
+                        framedata_arg = self.sim.data[path]
+                    if (path+"/checkpoint" in self.sim.data):
+                        intdata_arg = self.sim.data[path+"/checkpoint"]
+
                     print "Found checkpoint: ", self.sim.data[path+"/checkpoint"]
+                    print "Found framedata: ", self.sim.data[path]
                     analysis.func.prepare(self._trj, u=self._u, ref=self._ref,
                                    start=start+int(cframecount)+1, stop=stop,
-                                   intdata=self.sim.data[path+"/checkpoint"],
+                                   framedata=framedata_arg,
+                                   intdata=intdata_arg,
                                    frames_processed=int(cframecount))
+
                     existing_start_stops[path] = (start+int(cframecount)+1,stop)
             else:
                 analysis.func.prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop)
@@ -130,17 +142,34 @@ class BatchAnalysis():
             else:
                 frames = self._trj[start:]
 
+            if path+"/analysis_stats" not in self.sim.data:
+                self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip,
+                                                                  analysis.checkpoint,
+                                                                  analysis.func.framecount()])
+
             #print " Processing %d frames..." % frames.numframes
             for i, f in enumerate(frames):
                 current_frame = i + start
                 # TODO: throw error if trajectory actually doesn't support checkpoints
                 if analysis.checkpoint != 0:
                     if current_frame % analysis.checkpoint == 0 and i > 0:
-                        print ".",
-                        print path+"/checkpoint", analysis.func.intresults(), analysis.func.framecount()
-                        self.sim.data[path+"/checkpoint"] = analysis.func.intresults()
+
+                        # This stores how many frames we've analyzed, critical!
                         self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, analysis.checkpoint,
                                                                  analysis.func.framecount()])
+
+                        # The analysis.func routine may or may not update this.
+                        results = analysis.func.results()
+                        if len(results) > 0:
+                            print "Storing Results at", path, analysis.func.results(), analysis.func.framecount()
+                            self.sim.data[path] = analysis.func.results()
+
+                        # The analysis.func routine may or may not update this.
+                        intresults = analysis.func.intresults()
+                        if len(intresults) > 0:
+                            print "Storing Checkpoint at", path+"/checkpoint", analysis.func.intresults(), analysis.func.framecount()
+                            self.sim.data[path+"/checkpoint"] = intresults
+
                 analysis.func.process(f)
 
         print " done."
@@ -150,9 +179,6 @@ class BatchAnalysis():
             # If there is no data or synchronize is False
             if (existing_data[path] is None) or not analysis.sync:
                 self.sim.data.add(path, analysis.func.results())
-            elif analysis.func.results().shape[0] < existing_data[path].shape[0]:
-            #elif analysis.func.results().shape[0] < existing_data[path].shape[0]+1: #Debug line to always append
-                self.sim.data.append(path, analysis.func.results())
             else:
                 print "Nothing done, file is complete!"
 

@@ -50,7 +50,7 @@ class CylinderHistogram(PerFrameAnalysis):
 
         #self._all_edges = np.linspace(histmin, histmax, num=histbins)
 
-    def _loadcheckpoint(self, frames_processed, intdata):
+    def loadcheckpoint(self, frames_processed, framedata, intdata):
         if intdata == None:
             self.frames_processed = 0
             self.intdata = np.zeros(self.histbins, dtype=np.uint64)
@@ -58,6 +58,7 @@ class CylinderHistogram(PerFrameAnalysis):
             # 0-index is needed because we're storing a 1x1 numpy array
             # but using an integer in the method.
             self.frames_processed = frames_processed
+            self.framedata = framedata
             self.intdata = intdata
 
     def process(self, frame):

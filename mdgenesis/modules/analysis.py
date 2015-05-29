@@ -34,12 +34,13 @@ class PerFrameAnalysis(object):
             self.process(frame)
         return self.framedata
 
-    def prepare(self, trj, u=None, start=0, stop=-1, skip=0,
-                ref=None, frames_processed=0, intdata=None):
+    def prepare(self, trj, u=None, start=0, stop=-1, skip=0, ref=None,
+                frames_processed=0, framedata=[], intdata=[]):
         """ Prepares the analysis routine and loads intermediate data
-            if it exists. trj must be an iterable made outside of MDGenesis """
+            if it exists. trj must be an iterable made outside of MDGenesis
+        """
 
-        self._loadcheckpoint(frames_processed, intdata)
+        self.loadcheckpoint(frames_processed, framedata, intdata)
 
         if stop != -1:
             self.trj = trj[start:stop]
@@ -48,7 +49,7 @@ class PerFrameAnalysis(object):
         self.u = u
         self.ref = ref
 
-        self.framedata = []  # final result
+        self._update_selections()
 
     def process(self, frame):
         """ Process a single trajectory frame """
@@ -57,8 +58,9 @@ class PerFrameAnalysis(object):
     def _update_selections(self):
         pass
 
-    def _loadcheckpoint(self, frames_processed, intdata):
+    def loadcheckpoint(self, frames_processed, framedata, intdata):
         self.frames_processed = frames_processed
+        self.framedata = framedata
         self.intdata = intdata
 
     def results(self):

@@ -64,12 +64,14 @@ class RMSD(object):
 class RMSD(PerFrameAnalysis):
 
     def __init__(self, selection_str):
-        """Keep in mind that this does not do alignment, it's the laziest RMSD
+        """Keep in mind that this does not do alignment and the selections
+            are fixed (as they should be), it's the laziest RMSD
         script of all time!
         """
         self._selection_str = selection_str
 
     def process(self, frame):
+        self.frames_processed += 1
         a = self._selection.atoms.coordinates()
         b = self._refselection.atoms.coordinates()
         self.framedata.append(np.sqrt(np.sum(np.power(a-b,2))/a.shape[0]))
