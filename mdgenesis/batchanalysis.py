@@ -1,7 +1,7 @@
 from collections import namedtuple, OrderedDict
 from MDAnalysis import collection
 import numpy as np
-#import pandas as pd
+import pandas as pd
 import mdsynthesis as mds
 
 class BatchAnalysis():
@@ -103,7 +103,7 @@ class BatchAnalysis():
                 print "Start/Stop/Skip/FC in analysis_stats: ", cstart, cstop, cskip, cframecount
 
                 # Have there been changes in this execution versus the last time?
-                if (cstart != start or cskip != skip or cstop > stop or
+                if (cstart < start or cskip != skip or cstop > stop or
                     ccheckpoint != analysis.checkpoint):
                     print "Detected difference in start/stop/skip/checkpoint"
                     print "Gotta restart from t=0, hope you don't mind!"
@@ -113,15 +113,18 @@ class BatchAnalysis():
 
                 else:
                     # Load intermediate data and framedata if it exists!
-                    framedata_arg = []
-                    intdata_arg = []
                     if (path in self.sim.data):
                         framedata_arg = self.sim.data[path]
+                    else:
+                        framedata_arg = pd.DataFrame()
                     if (path+"/checkpoint" in self.sim.data):
                         intdata_arg = self.sim.data[path+"/checkpoint"]
+                    else:
+                        intdata_arg = pd.DataFrame()
 
                     print "Found checkpoint: ", self.sim.data[path+"/checkpoint"]
-                    print "Found framedata: ", self.sim.data[path]
+                    print "Starting at: ", start+int(cframecount)
+                    #print "Found framedata: ", self.sim.data[path]
                     analysis.func.prepare(self._trj, u=self._u, ref=self._ref,
                                    start=start+int(cframecount)+1, stop=stop,
                                    framedata=framedata_arg,
@@ -137,6 +140,7 @@ class BatchAnalysis():
         # a previous run that had a different start/skip/stop time.
         for path, analysis in self._sequential.items():
             start, stop = existing_start_stops[path]
+            print "Start, stop are: ", start, stop
             if stop != -1:
                 frames = self._trj[start:stop]
             else:
@@ -150,6 +154,7 @@ class BatchAnalysis():
             #print " Processing %d frames..." % frames.numframes
             for i, f in enumerate(frames):
                 current_frame = i + start
+                print i, i+start, analysis.checkpoint, current_frame % analysis.checkpoint == 0
                 # TODO: throw error if trajectory actually doesn't support checkpoints
                 if analysis.checkpoint != 0:
                     if current_frame % analysis.checkpoint == 0 and i > 0:
@@ -161,13 +166,15 @@ class BatchAnalysis():
                         # The analysis.func routine may or may not update this.
                         results = analysis.func.results()
                         if len(results) > 0:
-                            print "Storing Results at", path, analysis.func.results(), analysis.func.framecount()
-                            self.sim.data[path] = analysis.func.results()
+                            #print "Storing Results at", path, analysis.func.results(), analysis.func.framecount()
+                            print "Storing Results at", path, analysis.func.framecount()
+                            self.sim.data[path] = results
 
                         # The analysis.func routine may or may not update this.
                         intresults = analysis.func.intresults()
                         if len(intresults) > 0:
-                            print "Storing Checkpoint at", path+"/checkpoint", analysis.func.intresults(), analysis.func.framecount()
+                            #print "Storing Checkpoint at", path+"/checkpoint", analysis.func.intresults(), analysis.func.framecount()
+                            print "Storing Checkpoint at", path+"/checkpoint", analysis.func.framecount()
                             self.sim.data[path+"/checkpoint"] = intresults
 
                 analysis.func.process(f)

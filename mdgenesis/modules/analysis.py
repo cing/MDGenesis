@@ -4,6 +4,7 @@ Base class for Analysis, the components of BatchAnalysis.
 """
 
 import numpy as np
+import pandas as pd
 
 class PerFrameAnalysis(object):
     """ Base class for analysis that runs independently on each step
@@ -35,12 +36,12 @@ class PerFrameAnalysis(object):
         return self.framedata
 
     def prepare(self, trj, u=None, start=0, stop=-1, skip=0, ref=None,
-                frames_processed=0, framedata=[], intdata=[]):
+                frames_processed=0, framedata=pd.DataFrame(), intdata=pd.DataFrame()):
         """ Prepares the analysis routine and loads intermediate data
             if it exists. trj must be an iterable made outside of MDGenesis
         """
 
-        self.loadcheckpoint(frames_processed, framedata, intdata)
+        self._loadcheckpoint(frames_processed, framedata, intdata)
 
         if stop != -1:
             self.trj = trj[start:stop]
@@ -58,18 +59,18 @@ class PerFrameAnalysis(object):
     def _update_selections(self):
         pass
 
-    def loadcheckpoint(self, frames_processed, framedata, intdata):
+    def _loadcheckpoint(self, frames_processed, framedata, intdata):
         self.frames_processed = frames_processed
         self.framedata = framedata
         self.intdata = intdata
 
     def results(self):
         """ Returns an array of your analysis """
-        return np.array(self.framedata)
+        return self.framedata
 
     def intresults(self):
         """ Returns an array of intermediate data """
-        return np.array(self.intdata)
+        return self.intdata
 
     def framecount(self):
         """ Returns the number of frames processed """
@@ -118,7 +119,7 @@ class AllAtOnceAnalysis(object):
 
     def results(self):
         """ Returns an array of your analysis """
-        return np.array(self.framedata)
+        return self.framedata
 
     def intresults(self):
         raise NotImplementedError()

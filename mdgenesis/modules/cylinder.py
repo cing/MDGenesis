@@ -1,5 +1,6 @@
 # Cylinder analysis class
 import numpy as np
+import pandas as pd
 from numpy.linalg import norm
 
 from analysis import PerFrameAnalysis
@@ -50,13 +51,14 @@ class CylinderHistogram(PerFrameAnalysis):
 
         #self._all_edges = np.linspace(histmin, histmax, num=histbins)
 
-    def loadcheckpoint(self, frames_processed, framedata, intdata):
-        if intdata == None:
+    # We don't need to initialize framedata because it's only made
+    # when results() is called.
+    def _loadcheckpoint(self, frames_processed, framedata, intdata):
+        if len(intdata) == 0:
             self.frames_processed = 0
-            self.intdata = np.zeros(self.histbins, dtype=np.uint64)
+            self.intdata = pd.DataFrame(np.zeros(self.histbins, dtype=np.uint64),
+                                        columns=["bincount"])
         else:
-            # 0-index is needed because we're storing a 1x1 numpy array
-            # but using an integer in the method.
             self.frames_processed = frames_processed
             self.framedata = framedata
             self.intdata = intdata
@@ -73,19 +75,19 @@ class CylinderHistogram(PerFrameAnalysis):
 
         # boolean mask for distances below the radius, hist'd on solute-axis
         h = np.histogram(self._scoord[d <= self.r][:,self.saxis] - self._ref_com[self.saxis],
-                         range=np.array([self.histmin, self.histmax]),
-                         bins=np.array(self.histbins), normed=False)[0]
+                         range=[self.histmin, self.histmax],
+                         bins=self.histbins, normed=False)[0]
 
         # optionally output the resids of solute in cylinder (useful for VMD)
         #print self._sids[dist <= self.radius]
 
-        self.intdata += h
+        self.intdata += pd.DataFrame(h, columns=["bincount"])
 
     def results(self):
         if self.frames_processed > 0:
-            return np.array(self.intdata)/float(self.frames_processed)
+            return self.intdata/float(self.frames_processed)
         else:
-            return np.array(self.intdata)
+            return self.intdata
 
     def _update_selections(self):
         self._top_com = self.u.selectAtoms(self.topsel).centerOfMass()
