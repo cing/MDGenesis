@@ -22,31 +22,15 @@ class PerFrameAnalysis(object):
 
         pass
 
-    def run(self, trj, u=None, frames_processed=0, intdata=None):
-        """ Analyze trajectory and produce timeseries. Use when you don't
-            care about saving intermediate data during long calculations
-            or only analyzing a subset of frames.
-        """
-        self.framedata = []
-        self.prepare(trj=trj, u=u, ref=ref,
-                     frames_processed=frames_processed, intdata=intdata)
-        for frame in self.trj:
-            logger.debug("Analyzing frame %d" % ts.frame)
-            self.process(frame)
-        return self.framedata
-
-    def prepare(self, trj, u=None, start=0, stop=-1, skip=0, ref=None,
-                frames_processed=0, framedata=pd.DataFrame(), intdata=pd.DataFrame()):
+    def prepare(self, trj, u=None, ref=None, analyzed_frames=pd.DataFrame(),
+                framedata=pd.DataFrame(), intdata=pd.DataFrame()):
         """ Prepares the analysis routine and loads intermediate data
             if it exists. trj must be an iterable made outside of MDGenesis
         """
 
-        self._loadcheckpoint(frames_processed, framedata, intdata)
+        self._loadcheckpoint(analyzed_frames, framedata, intdata)
 
-        if stop != -1:
-            self.trj = trj[start:stop]
-        else:
-            self.trj = trj[start:]
+        self.trj = trj
         self.u = u
         self.ref = ref
 
@@ -59,8 +43,8 @@ class PerFrameAnalysis(object):
     def _update_selections(self):
         pass
 
-    def _loadcheckpoint(self, frames_processed, framedata, intdata):
-        self.frames_processed = frames_processed
+    def _loadcheckpoint(self, analyzed_frames, framedata, intdata):
+        self.analyzed_frames = analyzed_frames
         self.framedata = framedata
         self.intdata = intdata
 
@@ -92,22 +76,13 @@ class AllAtOnceAnalysis(object):
 
         pass
 
-    def run(self, trj, u=None, ref=None):
-        """ Analyze trajectory and return results array. """
-        self.framedata = []
-        self.prepare(trj=trj, u=u, ref=ref)
-        return self.results()
-
-    def prepare(self, trj, u=None, ref=None, start=0, stop=-1, skip=0):
+    def prepare(self, trj, u=None, ref=None):
         """ Prepares the analysis routine and loads intermediate data
             if it exists. trj must be an iterable made outside of MDGenesis """
-        if stop != -1:
-            self.trj = trj[start:stop]
-        else:
-            self.trj = trj[start:]
+
+        self.trj = trj
         self.u = u
         self.ref = ref
-        #self.u.trajectory.rewind()  # Is this EVER needed?
         self._update_selections()
         self.framedata = []  # final result
 

@@ -53,13 +53,13 @@ class CylinderHistogram(PerFrameAnalysis):
 
     # We don't need to initialize framedata because it's only made
     # when results() is called.
-    def _loadcheckpoint(self, frames_processed, framedata, intdata):
+    def _loadcheckpoint(self, analyzed_frames, framedata, intdata):
         if len(intdata) == 0:
-            self.frames_processed = 0
+            self.analyzed_frames = pd.DataFrame()
             self.intdata = pd.DataFrame(np.zeros(self.histbins, dtype=np.uint64),
                                         columns=["bincount"])
         else:
-            self.frames_processed = frames_processed
+            self.analyzed_frames = analyzed_frames
             self.framedata = framedata
             self.intdata = intdata
 
