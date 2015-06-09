@@ -54,14 +54,14 @@ class CylinderHistogram(PerFrameAnalysis):
     # We don't need to initialize framedata because it's only made
     # when results() is called.
     def _loadcheckpoint(self, framedata, intdata):
+        self.framedata = framedata
         if intdata.empty:
             self.intdata = pd.DataFrame(np.zeros([self.histbins,2],
                                                  dtype=np.int64),
                                         columns=["bincount",
                                                  #"boolcount",
-                                                 "total_boolcount"])
+                                                 "total_frames"])
         else:
-            self.framedata = framedata
             self.intdata = intdata
 
     def process(self, frame):
@@ -82,7 +82,7 @@ class CylinderHistogram(PerFrameAnalysis):
         #print self._sids[dist <= self.radius]
 
         # Yep, I make three entirely new dataframes for each frame!
-        self.intdata.ix[0, "total_boolcount"] += 1
+        self.intdata.ix[0, "total_frames"] += 1
         #self.intdata["boolcount"] += pd.Series(h) > 0
         self.intdata["bincount"] += pd.Series(h)
 
@@ -91,7 +91,7 @@ class CylinderHistogram(PerFrameAnalysis):
         return True
 
     def results(self):
-        frames_processed = float(self.intdata["total_boolcount"][0])
+        frames_processed = float(self.intdata["total_frames"][0])
         edges = pd.DataFrame(np.linspace(self.histmin, self.histmax,
                                          num=self.histbins+1)[:self.histbins],
                              columns=["edges"])

@@ -25,18 +25,17 @@ class PerFrameAnalysis(object):
     def prepare(self, trj, u=None, ref=None, intdata=pd.DataFrame(),
                 framedata=pd.DataFrame()):
         """ Prepares the analysis routine and loads intermediate data
-            if it exists. trj must be an iterable made outside of MDGenesis
+            if it exists. trj must be an iterable made outside of MDGenesis.
         """
 
+        self._update_selections()   # Before loadcheckpoint to pre-allocate
         self._loadcheckpoint(framedata, intdata)
 
         self.trj = trj
         self.u = u
         self.ref = ref
 
-        self._update_selections()
-
-    def process(self, frame):
+    def process(self, frame, frameid):
         """ Process a single trajectory frame """
         self.framedata.append(True)
 

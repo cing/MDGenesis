@@ -136,7 +136,7 @@ class BatchAnalysis():
                 for i, f in enumerate(self._trj):
                     # Visit the analysis module for the heavy lifting
                     if i in frames_to_process:
-                        if analysis.func.process(f):
+                        if analysis.func.process(f, i):
                             completed_frames[i] = [dt.datetime.today()]
 
                     # Write the checkpoint (once you've completed enough frames)
