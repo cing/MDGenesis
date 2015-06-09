@@ -55,9 +55,10 @@ class CylinderHistogram(PerFrameAnalysis):
     # when results() is called.
     def _loadcheckpoint(self, framedata, intdata):
         if intdata.empty:
-            self.intdata = pd.DataFrame(np.zeros([self.histbins,3],
+            self.intdata = pd.DataFrame(np.zeros([self.histbins,2],
                                                  dtype=np.int64),
-                                        columns=["bincount", "boolcount",
+                                        columns=["bincount",
+                                                 #"boolcount",
                                                  "total_boolcount"])
         else:
             self.framedata = framedata
@@ -82,7 +83,7 @@ class CylinderHistogram(PerFrameAnalysis):
 
         # Yep, I make three entirely new dataframes for each frame!
         self.intdata.ix[0, "total_boolcount"] += 1
-        self.intdata["boolcount"] += pd.Series(h) > 0
+        #self.intdata["boolcount"] += pd.Series(h) > 0
         self.intdata["bincount"] += pd.Series(h)
 
         # If you do not return True, then the frame will be re-analyzed next
@@ -91,10 +92,15 @@ class CylinderHistogram(PerFrameAnalysis):
 
     def results(self):
         frames_processed = float(self.intdata["total_boolcount"][0])
+        edges = pd.DataFrame(np.linspace(self.histmin, self.histmax,
+                                         num=self.histbins+1)[:self.histbins],
+                             columns=["edges"])
+
         if frames_processed > 0:
-            return self.intdata["bincount"]/frames_processed
+            return pd.concat([self.intdata["bincount"]/frames_processed,
+                              edges], axis=1)
         else:
-            return self.intdata["bincount"]
+            return pd.concat([self.intdata["bincount"], edges], axis=1)
 
     def _update_selections(self):
         self._top_com = self.u.selectAtoms(self.topsel).centerOfMass()
