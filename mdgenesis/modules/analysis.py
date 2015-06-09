@@ -44,8 +44,12 @@ class PerFrameAnalysis(object):
         pass
 
     def _loadcheckpoint(self, framedata, intdata):
-        self.framedata = framedata
-        self.intdata = intdata
+        if intdata.empty:
+            self.intdata = pd.DataFrame()
+            self.framedata = pd.DataFrame()
+        else:
+            self.framedata = framedata
+            self.intdata = intdata
 
     def results(self):
         """ Returns an array of your analysis """
