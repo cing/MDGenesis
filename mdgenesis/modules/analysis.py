@@ -28,12 +28,12 @@ class PerFrameAnalysis(object):
             if it exists. trj must be an iterable made outside of MDGenesis.
         """
 
-        self._update_selections()   # Before loadcheckpoint to pre-allocate
-        self._loadcheckpoint(framedata, intdata)
-
         self.trj = trj
         self.u = u
         self.ref = ref
+
+        self._update_selections()   # Before loadcheckpoint to pre-allocate
+        self._loadcheckpoint(framedata, intdata)
 
     def process(self, frame, frameid):
         """ Process a single trajectory frame """
