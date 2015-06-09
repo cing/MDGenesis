@@ -155,11 +155,12 @@ class BatchAnalysis():
                 self._write_state(path, analysis)
 
     def _write_state(self, path, analysis):
-        results = analysis.func.results()
         intresults = analysis.func.intresults()
+        if not intresults.empty:
+            self.sim.data[path+"/intermediate_data"] = intresults
         results = analysis.func.results()
-        self.sim.data[path+"/intermediate_data"] = intresults
-        self.sim.data[path] = results
+        if not results.empty:
+            self.sim.data[path] = results
 
     def run_allatonce_analysis(self, start, stop, skip=1):
 
