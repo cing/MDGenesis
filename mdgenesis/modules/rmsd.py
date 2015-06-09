@@ -1,5 +1,6 @@
 # RMSD analysis class
 import numpy as np
+import pandas as pd
 #import numpy.linalg
 
 #from MDAnalysis import *
@@ -70,64 +71,90 @@ class RMSD(PerFrameAnalysis):
         """
         self._selection_str = selection_str
 
-    def process(self, frame):
-        self.frames_processed += 1
+    def _loadcheckpoint(self, framedata, intdata):
+        self.intdata = intdata
+        if framedata.empty:
+            self.framedata = pd.DataFrame(columns=["rmsd"])
+        else:
+            self.framedata = framedata
+
+    def process(self, frame, frameid):
         a = self._selection.atoms.coordinates()
         b = self._refselection.atoms.coordinates()
-        self.framedata.append(np.sqrt(np.sum(np.power(a-b,2))/a.shape[0]))
+        rmsd = np.sqrt(np.sum(np.power(a-b,2))/a.shape[0])
+        rmsd_df = pd.DataFrame(rmsd, columns=["rmsd"], index=[frameid])
+        self.framedata = self.framedata.append(rmsd_df)
+        return True
 
     def _update_selections(self):
         self._selection = self.u.selectAtoms(self._selection_str)
         self._refselection = self.ref.selectAtoms(self._selection_str)
 
-# TODO: Make this computation resumable by storing coord_sum and coord_sqsum
-#       in some kind of MDGenesis metadata columns. FrameData is currently unused.
 class RMSF(PerFrameAnalysis):
 
-    def __init__(self, selection_str, coordinate_indices=None):
+    # Fancy indexing in numpy lets you specify a list of whatever
+    # columns you want. Just pass [0,1] to get X,Y and pass [2] to get Z.
+    def __init__(self, selection_str, coordinate_indices=range(3)):
         """Selection string describes the atoms to be selected for RMSF analysis.
         coordinate range is a list of sequential indices.
         """
         self._selection_str = selection_str
-        self._used_frames = 0
 
-        # Fancy indexing in numpy lets you specify a list of whatever
-        # columns you want. Just pass [0,1] to get X,Y and pass [2] to get Z.
-        if coordinate_indices is None:
-            self._coordinate_indices = range(3)
+        self._ci = coordinate_indices
+        self._clabels = [["x","y","z"][ind] for ind in coordinate_indices]
+        self._rmsf_sum_labels = ["rmsf_sum_"+lbl for lbl in self._clabels]
+        self._rmsf_sqsum_labels = ["rmsf_sqsum_"+lbl for lbl in self._clabels]
+
+    def _loadcheckpoint(self, framedata, intdata):
+
+        self.framedata = framedata
+        if intdata.empty:
+            mi=pd.MultiIndex.from_product([['rmsf_sum', 'rmsf_sqsum'],
+                              self._clabels],
+                              names=['series', 'coordinate'])
+
+            # We add one to store a resid index labelled zero for total_frames storage
+            self.intdata = pd.DataFrame(np.zeros([len(self._selection)+1,
+                                                  2*len(self._ci)]),
+                                        columns=mi, index=np.hstack([np.array([0]),self._sids]))
+            self.intdata['total_frames'] = pd.Series(np.zeros([len(self._selection)+1]),
+                                                     index=np.hstack([np.array([0]),self._sids]))
+
+            print self.intdata
         else:
-            self._coordinate_indices = coordinate_indices
+            self.intdata = intdata
 
     def results(self):
         """ Post-processing is needed to return the results since they are not
             appended. """
-        f = self.frames_processed
-        ci = self._coordinate_indices
+        f = float(self.intdata["total_frames"][0])
 
-        if len(ci) > 0:
-            return np.sqrt((self._coord_sqsum[:,ci]/f -
-                           (self._coord_sum[:,ci]/f)**2).sum(1))
-        else:
-            return np.sqrt((self._coord_sqsum/f -
-                           (self._coord_sum/f)**2).sum(1))
+        return np.sqrt((self.intdata["rmsf_sqsum"]/f -
+                       (self.intdata["rmsf_sum"]/f)**2).sum(1))
 
-    def process(self,ts):
-        self.frames_processed += 1
-        self._coord_sum += self._selection.coordinates()
-        self._coord_sqsum += self._selection.coordinates()**2
+    def process(self, frame, frameid):
+        self.intdata.ix[0, "total_frames"] += 1
+        self.intdata["rmsf_sum"] += pd.DataFrame(self._selection.coordinates()[:,self._ci],
+                                                 index=self._sids,
+                                                 columns=self._clabels)
+        self.intdata["rmsf_sqsum"] += pd.DataFrame(self._selection.coordinates()[:,self._ci]**2,
+                                                   index=self._sids,
+                                                   columns=self._clabels)
+
+        return True
 
     def _update_selections(self):
         self._selection = self.u.selectAtoms(self._selection_str)
-        self._coord_sum = np.zeros([len(self._selection), 3])
-        self._coord_sqsum = np.zeros([len(self._selection), 3])
+        self._sids = np.array([sel.number for sel in self._selection])
 
 class RadiusOfGyration(PerFrameAnalysis):
 
     def __init__(self, selection):
         self._selection_str =  selection
 
-    def process(self, frame):
+    def process(self, frame, frameid):
         self.framedata.append(self._selection.radiusOfGyration())
+        return True
 
     def _update_selections(self):
         self._selection = self.u.selectAtoms(self._selection_str)
