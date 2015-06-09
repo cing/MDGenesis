@@ -22,13 +22,13 @@ class PerFrameAnalysis(object):
 
         pass
 
-    def prepare(self, trj, u=None, ref=None, analyzed_frames=pd.DataFrame(),
-                framedata=pd.DataFrame(), intdata=pd.DataFrame()):
+    def prepare(self, trj, u=None, ref=None, intdata=pd.DataFrame(),
+                framedata=pd.DataFrame()):
         """ Prepares the analysis routine and loads intermediate data
             if it exists. trj must be an iterable made outside of MDGenesis
         """
 
-        self._loadcheckpoint(analyzed_frames, framedata, intdata)
+        self._loadcheckpoint(framedata, intdata)
 
         self.trj = trj
         self.u = u
@@ -43,8 +43,7 @@ class PerFrameAnalysis(object):
     def _update_selections(self):
         pass
 
-    def _loadcheckpoint(self, analyzed_frames, framedata, intdata):
-        self.analyzed_frames = analyzed_frames
+    def _loadcheckpoint(self, framedata, intdata):
         self.framedata = framedata
         self.intdata = intdata
 
@@ -55,10 +54,6 @@ class PerFrameAnalysis(object):
     def intresults(self):
         """ Returns an array of intermediate data """
         return self.intdata
-
-    def framecount(self):
-        """ Returns the number of frames processed """
-        return self.frames_processed
 
 class AllAtOnceAnalysis(object):
     """ Base class for analysis that runs all at once without

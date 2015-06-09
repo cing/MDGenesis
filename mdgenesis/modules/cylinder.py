@@ -53,20 +53,19 @@ class CylinderHistogram(PerFrameAnalysis):
 
     # We don't need to initialize framedata because it's only made
     # when results() is called.
-    def _loadcheckpoint(self, analyzed_frames, framedata, intdata):
-        if len(intdata) == 0:
-            self.analyzed_frames = pd.DataFrame()
-            self.intdata = pd.DataFrame(np.zeros(self.histbins, dtype=np.uint64),
-                                        columns=["bincount"])
+    def _loadcheckpoint(self, framedata, intdata):
+        if intdata.empty:
+            self.intdata = pd.DataFrame(np.zeros([self.histbins,3],
+                                                 dtype=np.int64),
+                                        columns=["bincount", "boolcount",
+                                                 "total_boolcount"])
         else:
-            self.analyzed_frames = analyzed_frames
             self.framedata = framedata
             self.intdata = intdata
 
     def process(self, frame):
         """ Process a single trajectory frame """
         self._update_selections()
-        self.frames_processed += 1
 
         # distance to the helix axis defined by top_com and bottom_com
         d = norm(np.cross(self._scoord - self._top_com,
@@ -81,13 +80,21 @@ class CylinderHistogram(PerFrameAnalysis):
         # optionally output the resids of solute in cylinder (useful for VMD)
         #print self._sids[dist <= self.radius]
 
-        self.intdata += pd.DataFrame(h, columns=["bincount"])
+        # Yep, I make three entirely new dataframes for each frame!
+        self.intdata.ix[0, "total_boolcount"] += 1
+        self.intdata["boolcount"] += pd.Series(h) > 0
+        self.intdata["bincount"] += pd.Series(h)
+
+        # If you do not return True, then the frame will be re-analyzed next
+        # time, but heads up, that could mess up your intermediate data!
+        return True
 
     def results(self):
-        if self.frames_processed > 0:
-            return self.intdata/float(self.frames_processed)
+        frames_processed = float(self.intdata["total_boolcount"][0])
+        if frames_processed > 0:
+            return self.intdata["bincount"]/frames_processed
         else:
-            return self.intdata
+            return self.intdata["bincount"]
 
     def _update_selections(self):
         self._top_com = self.u.selectAtoms(self.topsel).centerOfMass()

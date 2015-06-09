@@ -3,6 +3,7 @@ from MDAnalysis import collection
 import numpy as np
 import pandas as pd
 import mdsynthesis as mds
+import datetime as dt
 
 class BatchAnalysis():
     '''
@@ -50,7 +51,9 @@ class BatchAnalysis():
     def add_allatonce(self, path, func, sync=False):
         self._allatonce[path] = self.Analysis(func=func, sync=sync)
 
-    def run(self, trj, u=None, ref=None, start=0, stop=-1, skip=1):
+    # TODO: There isn't a mechanism to avoid setting a stop value!
+    #       In other words, then doesn't really work for a persistent process
+    def run(self, trj, u=None, ref=None, start=0, stop=1000000, skip=1):
         '''This executes all loaded analysis types'''
         self._trj = trj
         self._u = u
@@ -88,128 +91,82 @@ class BatchAnalysis():
             self.sim.data[path] = collection[i][0]
             self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, -1, -1])
 
-    def run_sequential_analysis(self, start, stop, skip=1):
+    def unanalyzed_frames(self, path, start, stop, skip):
+        """ Does the sole job of returning a dataframe of unanalyzed frames """
+        # This is the only place where we decide what frames are done
+        possible_frames = set(np.arange(start, stop, skip))
+        analyzed_frames = self.sim.data[path+'/analysis_log']
+        #print path, start, stop, skip, possible_frames, analyzed_frames
+        if analyzed_frames is not None:
+            return possible_frames - set(analyzed_frames.index)
+        else:
+            return possible_frames
 
-        existing_data = {}
-        existing_start_stops = {}
+    # TODO: why load framedata?
+    def read_stored_frames(self, path):
+        intdata = self.sim.data[path+'/intermediate_data']
+        framedata = self.sim.data[path]
+        if intdata is None:
+            intdata = pd.DataFrame()
+        if framedata is None:
+            framedata = pd.DataFrame()
+        return intdata, framedata
 
+    def run_sequential_analysis(self, start, stop=1000000, skip=1):
+
+        frames_to_analyze = {}
         for path, analysis in self._sequential.items():
             print " Preparing %s" % path
-            existing_data[path] = self.sim.data.retrieve(path)
-
-            # Initialize an analysis module from the start or resume it at a
-            # later time if a checkpoint or synchronization flag has been set.
-
-            start_arg, stop_arg, skip_arg, chk_arg, fcount_arg = self._load_stats(path, analysis,
-                                                                                  start, stop, skip)
-            framedata_arg, intdata_arg = self._load_state(path, analysis,
-                                                          start, stop, skip)
-
-            if start_arg != start:
-                start_arg = start
-            elif fcount_arg > 0:
-                start_arg += fcount_arg + 1
-            if stop_arg != -1 and start_arg > stop_arg:
-                start_arg = stop_arg
-            if stop < stop_arg:
-                stop_arg = stop
-
-            existing_start_stops[path] = (int(start_arg), int(stop_arg))
-
+            intdata, framedata = self.read_stored_frames(path)
             analysis.func.prepare(self._trj, u=self._u, ref=self._ref,
-                                  start=int(start_arg), stop=int(stop_arg),
-                                  framedata=framedata_arg,
-                                  intdata=intdata_arg,
-                                  frames_processed=fcount_arg)
+                                  intdata=intdata,
+                                  framedata=framedata)
 
-        # We have to reslice the trajectory in case we are checkpointing/syncing
-        # a previous run that had a different start/skip/stop time.
+            if not analysis.sync:
+                print " Sync not set, clearing %s/analysis_log" % path
+                self.sim.data.remove(path+'/analysis_log')
+
         for path, analysis in self._sequential.items():
-            start, stop = existing_start_stops[path]
-            print "Start, stop are: ", start, stop
-            if stop != -1:
-                frames = self._trj[start:stop]
-            else:
-                frames = self._trj[start:]
+            print " Processing %s" % path
+            # TODO: consider doing this more often to exploit persistence layer
+            #       in a better way!
+            frames_to_process = self.unanalyzed_frames(path, start, stop, skip)
+            if len(frames_to_process) > 0:
+                completed_frames = {}
+                for i, f in enumerate(self._trj):
+                    # Visit the analysis module for the heavy lifting
+                    if i in frames_to_process:
+                        if analysis.func.process(f):
+                            completed_frames[i] = [dt.datetime.today()]
 
-            # Without checkpointing, it's still useful to store the start, stop, skip
-            if path+"/analysis_stats" not in self.sim.data:
-                self._write_stats(path, analysis, start, stop, skip)
+                    # Write the checkpoint (once you've completed enough frames)
+                    if (len(completed_frames) > 0 and
+                        len(completed_frames) % analysis.checkpoint == 0):
+                        print " Reached checkpoint at frame: %i" % i
+                        new_frame = pd.DataFrame.from_items(completed_frames.items(),
+                                                            orient='index',
+                                                            columns=['date_completed'])
+                        self.sim.data.append(path+'/analysis_log', new_frame)
+                        completed_frames = {}
+                        self._write_state(path, analysis)
 
-            #print " Processing %d frames..." % frames.numframes
-            for i, f in enumerate(frames):
-                print i, i+start
-                # TODO: assert this very early on!
-                if analysis.checkpoint != 0:
-                    if (i+start) % analysis.checkpoint == 0 and i > 0:
-                        self._write_stats(path, analysis, start, stop, skip)
-                        self._write_state(path, analysis, start, stop, skip)
+                # One final write for the final data
+                print " Writing to %s" % path
+                self._write_state(path, analysis)
 
-                analysis.func.process(f)
-
-        print " Final wrap-up, write the state and don't write -1 for the stop"
-        for path, analysis in self._sequential.items():
-
-            lastframe = analysis.func.framecount() + start
-
-            self._write_stats(path, analysis, start, lastframe, skip)
-            # If there is no data or synchronize is False
-            if (existing_data[path] is None):
-                # TODO: add append feature
-                self._write_state(path, analysis, start, lastframe, skip)
-            else:
-                self._write_state(path, analysis, start, lastframe, skip)
-
-    def _load_stats(self, path, analysis, start, stop, skip):
-        if analysis.sync and path+"/analysis_stats" in self.sim.data:
-            stats = self.sim.data[path+"/analysis_stats"]
-            print "Start/Stop/Skip/FC in analysis_stats: ", stats
-        else:
-            stats = (start, stop, skip, analysis.checkpoint, 0)
-        return stats
-
-    def _load_state(self, path, analysis, start, stop, skip):
-        # Load intermediate data and framedata if it exists!
-        if analysis.sync and path in self.sim.data:
-            framedata_arg = self.sim.data[path]
-        else:
-            framedata_arg = pd.DataFrame()
-
-        if analysis.sync and path+"/checkpoint" in self.sim.data:
-            intdata_arg = self.sim.data[path+"/checkpoint"]
-        else:
-            intdata_arg = pd.DataFrame()
-
-        return (intdata_arg, framedata_arg)
-
-    def _write_stats(self, path, analysis, start, stop, skip):
-        # This stores how many frames we've analyzed, critical!
-        print "Storing analysis stats ", start, stop, skip, analysis.checkpoint, analysis.func.framecount()
-        self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, analysis.checkpoint,
-                                                 analysis.func.framecount()])
-
-    def _write_state(self, path, analysis, start, stop, skip):
-        # The analysis.func routine may or may not update this.
+    def _write_state(self, path, analysis):
         results = analysis.func.results()
-        if len(results) > 0:
-            print "Storing Results ", results.tail, analysis.func.framecount()
-            #print "Storing Results at", path, analysis.func.framecount()
-            self.sim.data[path] = results
-
-        # The analysis.func routine may or may not update this.
         intresults = analysis.func.intresults()
-        if len(intresults) > 0:
-             print "Storing Checkpoint at", intresults.tail, analysis.func.framecount()
-             #print "Storing Checkpoint at", path+"/checkpoint", analysis.func.framecount()
-             self.sim.data[path+"/checkpoint"] = intresults
-
+        results = analysis.func.results()
+        self.sim.data[path+"/intermediate_data"] = intresults
+        self.sim.data[path] = results
 
     def run_allatonce_analysis(self, start, stop, skip=1):
 
         existing_data = {}
         for path, analysis in self._allatonce.items():
             print " Preparing %s" % path
-            analysis.func.prepare(self._trj, u=self._u, ref=self._ref, start=start, stop=stop)
+            analysis.func.prepare(self._trj, u=self._u, ref=self._ref)
             existing_data[path] = self.sim.data.retrieve(path)
             self.sim.data[path+"/analysis_stats"] = np.array([start, stop, skip, -1, -1])
 
