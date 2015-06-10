@@ -109,14 +109,12 @@ class RMSF(PerFrameAnalysis):
 
         self.framedata = framedata
         if intdata.empty:
-            mi=pd.MultiIndex.from_product([['rmsf_sum', 'rmsf_sqsum'],
-                              self._clabels],
-                              names=['series', 'coordinate'])
-
             # We add one to store a resid index labelled zero for total_frames storage
             self.intdata = pd.DataFrame(np.zeros([len(self._selection)+1,
                                                   2*len(self._ci)]),
-                                        columns=mi, index=np.hstack([np.array([0]),self._sids]))
+                                        columns=self._rmsf_sum_labels+self._rmsf_sqsum_labels,
+                                        index=np.hstack([np.array([0]),self._sids]))
+
             self.intdata['total_frames'] = pd.Series(np.zeros([len(self._selection)+1]),
                                                      index=np.hstack([np.array([0]),self._sids]))
 
@@ -127,24 +125,32 @@ class RMSF(PerFrameAnalysis):
     def results(self):
         """ Post-processing is needed to return the results since they are not
             appended. """
+
         f = float(self.intdata["total_frames"][0])
 
-        return np.sqrt((self.intdata["rmsf_sqsum"]/f -
-                       (self.intdata["rmsf_sum"]/f)**2).sum(1))
+        # dropna is needed to drop the damn frame count row with resid 0
+        rmsf_sqsum=self.intdata[self._rmsf_sqsum_labels].dropna()/f
+        rmsf_sum=(self.intdata[self._rmsf_sum_labels].dropna()/f)**2
+        rmsf_sqsum.columns=self._clabels
+        rmsf_sum.columns=self._clabels
+
+        return np.sqrt((rmsf_sqsum - rmsf_sum).sum(1))
 
     def process(self, frame, frameid):
         self.intdata.ix[0, "total_frames"] += 1
-        self.intdata["rmsf_sum"] += pd.DataFrame(self._selection.coordinates()[:,self._ci],
+        self.intdata[self._rmsf_sum_labels] += pd.DataFrame(self._selection.coordinates()[:,self._ci],
                                                  index=self._sids,
-                                                 columns=self._clabels)
-        self.intdata["rmsf_sqsum"] += pd.DataFrame(self._selection.coordinates()[:,self._ci]**2,
+                                                 columns=self._rmsf_sum_labels)
+        self.intdata[self._rmsf_sqsum_labels] += pd.DataFrame(self._selection.coordinates()[:,self._ci]**2,
                                                    index=self._sids,
-                                                   columns=self._clabels)
+                                                   columns=self._rmsf_sqsum_labels)
 
         return True
 
     def _update_selections(self):
         self._selection = self.u.selectAtoms(self._selection_str)
+        # We don't use resids because our protein has multiple subunits, it would
+        # make a lot more sense to do that though...
         self._sids = np.array([sel.number for sel in self._selection])
 
 class RadiusOfGyration(PerFrameAnalysis):
