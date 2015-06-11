@@ -67,7 +67,7 @@ class RMSD(PerFrameAnalysis):
     def __init__(self, selection_str):
         """Keep in mind that this does not do alignment and the selections
             are fixed (as they should be), it's the laziest RMSD
-        script of all time!
+            script of all time!
         """
         self._selection_str = selection_str
 
@@ -118,7 +118,6 @@ class RMSF(PerFrameAnalysis):
             self.intdata['total_frames'] = pd.Series(np.zeros([len(self._selection)+1]),
                                                      index=np.hstack([np.array([0]),self._sids]))
 
-            print self.intdata
         else:
             self.intdata = intdata
 
@@ -155,11 +154,24 @@ class RMSF(PerFrameAnalysis):
 
 class RadiusOfGyration(PerFrameAnalysis):
 
-    def __init__(self, selection):
-        self._selection_str =  selection
+    def __init__(self, selection_str):
+        """Keep in mind that this does not do alignment and the selections
+            are fixed (as they should be), it's the laziest RGYR
+            script of all time!
+        """
+        self._selection_str = selection_str
+
+    def _loadcheckpoint(self, framedata, intdata):
+        self.intdata = intdata
+        if framedata.empty:
+            self.framedata = pd.DataFrame(columns=["rgyr"])
+        else:
+            self.framedata = framedata
 
     def process(self, frame, frameid):
-        self.framedata.append(self._selection.radiusOfGyration())
+        rgyr_df = pd.DataFrame(self._selection.radiusOfGyration(),
+                               columns=["rgyr"], index=[frameid])
+        self.framedata = self.framedata.append(rgyr_df)
         return True
 
     def _update_selections(self):
