@@ -48,8 +48,9 @@ class BatchAnalysis():
         self._sequential[path] = self.Analysis(func=func, sync=sync,
                                                checkpoint=checkpoint)
 
-    def add_allatonce(self, path, func, sync=False):
-        self._allatonce[path] = self.Analysis(func=func, sync=sync)
+    def add_allatonce(self, path, func, sync=False, checkpoint=0):
+        self._allatonce[path] = self.Analysis(func=func, sync=sync,
+                                              checkpoint=checkpoint)
 
     # TODO: There isn't a mechanism to avoid setting a stop value!
     #       In other words, then doesn't really work for a persistent process
@@ -140,7 +141,7 @@ class BatchAnalysis():
                             completed_frames[i] = [dt.datetime.today()]
 
                     # Write the checkpoint (once you've completed enough frames)
-                    if (len(completed_frames) > 0 and
+                    if (len(completed_frames) > 0 and (analysis.checkpoint > 0) and
                         len(completed_frames) % analysis.checkpoint == 0):
                         print " Reached checkpoint at frame: %i" % i
                         new_frame = pd.DataFrame.from_items(completed_frames.items(),
