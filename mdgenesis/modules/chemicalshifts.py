@@ -1,4 +1,5 @@
 import mdtraj as md
+import pandas as pd
 from analysis import AllAtOnceAnalysis
 
 class ShiftX2(AllAtOnceAnalysis):
@@ -14,12 +15,13 @@ class ShiftX2(AllAtOnceAnalysis):
         self._atom_selection = atom_selection
 
     def results(self):
-        temp_results = md.nmr.chemical_shifts_shiftx2(self.traj[::self._skip],
+        temp_results = md.nmr.chemical_shifts_shiftx2(self.trj[::self._skip],
                                                       pH=self._ph,
                                                       temperature=self._temp)
+        temp_results.columns = temp_results.columns*self._skip
 
         if self._atom_selection is not None:
             i = temp_results.index.get_level_values('name').isin(self._atom_selection)
-            return temp_results[i]
+            return pd.DataFrame(temp_results[i])
         else:
-            return temp_results
+            return pd.DataFrame(temp_results)

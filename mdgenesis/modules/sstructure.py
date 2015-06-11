@@ -1,4 +1,5 @@
 import mdtraj as md
+import pandas as pd
 from analysis import AllAtOnceAnalysis
 
 class DSSP(AllAtOnceAnalysis):
@@ -10,7 +11,8 @@ class DSSP(AllAtOnceAnalysis):
 
     def results(self):
         self.framedata = md.compute_dssp(self.u)[:,self._selection]
-        return self.framedata
+        resid_list = [res.resSeq for res in self.trj.topology.residues if res.is_protein]
+        return pd.DataFrame(self.framedata, columns=resid_list)
 
     def _update_selections(self):
-        self._selection = [res.index for res in self.traj.topology.residues if res.is_protein]
+        self._selection = [res.index for res in self.trj.topology.residues if res.is_protein]
