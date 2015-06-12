@@ -1,5 +1,7 @@
 from analysis import PerFrameAnalysis
-import numpy
+from itertools import product
+import numpy as np
+import pandas as pd
 import logging
 logger = logging.getLogger('distance_between_points')
 
@@ -24,11 +26,19 @@ class DistanceBetweenPoints(PerFrameAnalysis):
         if not (self.selection1 and self.selection2):
             raise Exception('DistanceBetweenPoints: invalid selections')
 
-    def process(self, frame):
-        """ Process a single trajectory frame """
+    def _loadcheckpoint(self, framedata, intdata):
+        self.intdata = intdata
+        if framedata.empty:
+            self.framedata = pd.DataFrame(columns=["dist"])
+        else:
+            self.framedata = framedata
+
+    def process(self, frame, frameid):
         r = self._s1.centerOfMass() - self._s2.centerOfMass()
         d = numpy.sqrt(numpy.sum(r*r))
-        self.framedata.append(d)
+        dist_df = pd.DataFrame(d, columns=["dist"], index=[frameid])
+        self.framedata = self.framedata.append(dist_df)
+        return True
 
     def _update_selections(self):
         self._s1 = self.u.selectAtoms(self.selection1)
@@ -39,7 +49,7 @@ class CenterOfMassPosition(PerFrameAnalysis):
         relative to some selection.
     """
 
-    def __init__(self, selections, refsel=None, selaxis=None):
+    def __init__(self, selections, refsel=None, selaxis=range(3)):
         """Calculate distance between two selections.
 
         :Arguments:
@@ -56,10 +66,21 @@ class CenterOfMassPosition(PerFrameAnalysis):
             raise Exception('Position: no selection strings provided')
 
         self.selections = selections
+        self.selnames = ["pos"+str(r) for r in range(len(selections))]
         self.refsel = refsel
-        self.selaxis = selaxis
+        self.saxis = selaxis
+        self._clabels = [["_x","_y","_z"][ind] for ind in selaxis]
+        self._poslabels = ["".join(p) for p in list(product(self.selnames,
+                                                            self._clabels))]
 
-    def process(self, frame):
+    def _loadcheckpoint(self, framedata, intdata):
+        self.intdata = intdata
+        if framedata.empty:
+            self.framedata = pd.DataFrame(columns=self._poslabels)
+        else:
+            self.framedata = framedata
+
+    def process(self, frame, frameid):
         """ Process a single trajectory frame """
         if self.refsel != None:
             ref_com = self._refsel_atoms.centerOfMass()
@@ -67,13 +88,13 @@ class CenterOfMassPosition(PerFrameAnalysis):
         else:
             rel_pos = [a.centerOfMass() for a in self._selection_atoms]
 
-        if self.selaxis != None:
-            self.framedata.append([pos[self.selaxis] for pos in rel_pos])
-        else:
-            self.framedata.append([coord for pos in rel_pos for coord in pos])
+        p = np.hstack([p[self.saxis] for p in rel_pos]).reshape(1,len(self._poslabels))
+        pos_df = pd.DataFrame(p, columns=self._poslabels, index=[frameid])
+
+        self.framedata = self.framedata.append(pos_df)
+        return True
 
     def _update_selections(self):
         self._selection_atoms = [self.u.selectAtoms(sel) for sel in self.selections]
         if self.refsel != None:
             self._refsel_atoms = self.u.selectAtoms(self.refsel)
-
