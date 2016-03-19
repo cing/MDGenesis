@@ -1,5 +1,6 @@
 from analysis import PerFrameAnalysis
-import numpy
+import numpy as np
+import pandas as pd
 import logging
 logger = logging.getLogger('dihedral_angle')
 
@@ -28,9 +29,11 @@ class DihedralAngle(PerFrameAnalysis):
         if not (self.selection1 and self.selection2 and self.selection3 and self.selection4):
             raise Exception('DihedralAngle: invalid selections')
 
-    def process(self, frame):
+    def process(self, frame, frameid):
         """ Process a single trajectory frame """
-        self.framedata.append(self._sel.dihedral())
+        dihe_df = pd.DataFrame(self._sel.dihedral.value(), columns=["dihe"], index=[frameid])
+        self.framedata = self.framedata.append(dihe_df)
+        return True
 
     def _update_selections(self):
         self._sel = self.u.selectAtoms(self.selection1)
@@ -53,9 +56,12 @@ class PhiPsiAngle(PerFrameAnalysis):
         self.resnums = resnums
         self.atoms = atoms
 
-    def process(self, frame):
+    def process(self, frame, frameid):
         """ Process a single trajectory frame """
-        self.framedata.append(tuple([bbatoms.dihedral() for bbatoms in self._phi_sel+self._psi_sel]))
+        angs = [bbatoms.dihedral.value() for bbatoms in self._phi_sel+self._psi_sel]
+        dihe_df = pd.DataFrame(np.array(angs).T, columns=["phi","psi"], index=[frameid])
+        self.framedata = self.framedata.append(dihe_df)
+        return True
 
     def _update_selections(self):
         self._phi_sel = []
@@ -93,9 +99,11 @@ class Chi1Chi2Angle(PerFrameAnalysis):
         self.resnums = resnums
         self.atoms = atoms
 
-    def process(self, frame):
+    def process(self, frame, frameid):
         """ Process a single trajectory frame """
-        self.framedata.append(tuple([bbatoms.dihedral() for bbatoms in self._chi1_sel+self._chi2_sel]))
+        angs = [bbatoms.dihedral.value() for bbatoms in self._chi1_sel+self._chi2_sel]
+        dihe_df = pd.DataFrame(np.array(angs).T, columns=["chi1","chi2"], index=[frameid])
+        self.framedata = self.framedata.append(dihe_df)
 
     def _update_selections(self):
         self._chi1_sel = []
