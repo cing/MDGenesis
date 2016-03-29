@@ -107,7 +107,7 @@ class HelixRotation(AllAtOnceAnalysis):
             else:
                 ref_pos = self.trj.xyz[:,ref_atom[0],:]
 
-            helix_com = self.trj.xyz[:, helix_atoms[0], :]
+            helix_com = self.trj.xyz[:, helix_atoms, :].mean(axis=1)
 
             proj_of_com = vector_projection_onto_plane(paxis_com - helix_com, paxis)
             proj_of_ref = vector_projection_onto_plane(ref_pos - helix_com, paxis)
