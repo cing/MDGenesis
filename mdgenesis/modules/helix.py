@@ -12,8 +12,10 @@ def angle_between_vectors(A, B):
     a = np.linalg.norm(A, axis=1)
     b = np.linalg.norm(B, axis=1)
     theta = np.degrees(np.arccos(A_dot_B/a/b))
-    theta[theta>90]-=180
-    return np.abs(theta)
+    #theta[theta>90] *= -1
+    #theta[theta>90] += 180
+    #return np.abs(theta)
+    return theta
 
 def vector_projection_onto_plane(v, n):
     """
@@ -85,7 +87,8 @@ class HelixRotation(AllAtOnceAnalysis):
 
     def __init__(self, helix_selection, reference_selection, principal_axis_selection=None):
         """ Helix rotation is computed for a helical selection with respect
-            to the center of mass of the principal axis and a reference atom
+            to the center of mass of the principal axis and a reference atom.
+            If helix selection includes multiple atoms, a center of mass is calculated
         """
 
         self._reference_selection = reference_selection
@@ -99,7 +102,11 @@ class HelixRotation(AllAtOnceAnalysis):
 
         temp_results = []
         for ref_atom, helix_atoms in zip(self._reference_atoms, self._helix_atoms):
-            ref_pos = self.trj.xyz[:,ref_atom[0],:]
+            if len(ref_atom) > 1:
+                ref_pos = self.trj.xyz[:,ref_atom,:].mean(axis=1)
+            else:
+                ref_pos = self.trj.xyz[:,ref_atom[0],:]
+
             helix_com = self.trj.xyz[:, helix_atoms[0], :]
 
             proj_of_com = vector_projection_onto_plane(paxis_com - helix_com, paxis)
