@@ -35,7 +35,7 @@ class DistanceBetweenPoints(PerFrameAnalysis):
 
     def process(self, frame, frameid):
         r = self._s1.centerOfMass() - self._s2.centerOfMass()
-        d = numpy.sqrt(numpy.sum(r*r))
+        d = np.sqrt(np.sum(r*r))
         dist_df = pd.DataFrame(d, columns=["dist"], index=[frameid])
         self.framedata = self.framedata.append(dist_df)
         return True
