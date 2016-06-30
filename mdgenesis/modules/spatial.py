@@ -84,7 +84,7 @@ class CenterOfMassPosition(PerFrameAnalysis):
         """ Process a single trajectory frame """
         if self.refsel == None:
             rel_pos = [a.centerOfMass() for a in self._selection_atoms]
-        elif len(self.refsel) == len(self._selection_atoms)
+        elif len(self.refsel) == len(self._selection_atoms):
             rel_pos = [a.centerOfMass()-ref.centerOfMass()
                        for a,ref in zip(self._selection_atoms, self._refsel_atoms)]
         else:
