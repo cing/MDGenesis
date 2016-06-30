@@ -56,7 +56,7 @@ class CenterOfMassPosition(PerFrameAnalysis):
           *selections*
             A list of atom selection strings
           *refsel*
-            A selection for which the C.O.M. will provide
+            A selection for which the C.O.M. will provide or a list of selections
           *selaxis*
             Returns a specific axis (0,1,2) for (X,Y,Z) rather than all coordinates.
 
@@ -82,11 +82,14 @@ class CenterOfMassPosition(PerFrameAnalysis):
 
     def process(self, frame, frameid):
         """ Process a single trajectory frame """
-        if self.refsel != None:
+        if self.refsel == None:
+            rel_pos = [a.centerOfMass() for a in self._selection_atoms]
+        elif len(self.refsel) == len(self._selection_atoms)
+            rel_pos = [a.centerOfMass()-ref.centerOfMass()
+                       for a,ref in zip(self._selection_atoms, self._refsel_atoms)]
+        else:
             ref_com = self._refsel_atoms.centerOfMass()
             rel_pos = [a.centerOfMass()-ref_com for a in self._selection_atoms]
-        else:
-            rel_pos = [a.centerOfMass() for a in self._selection_atoms]
 
         p = np.hstack([p[self.saxis] for p in rel_pos]).reshape(1,len(self._poslabels))
         pos_df = pd.DataFrame(p, columns=self._poslabels, index=[frameid])
@@ -96,5 +99,8 @@ class CenterOfMassPosition(PerFrameAnalysis):
 
     def _update_selections(self):
         self._selection_atoms = [self.u.selectAtoms(sel) for sel in self.selections]
-        if self.refsel != None:
+
+        if len(self.refsel) == len(self.selections):
+            self._refsel_atoms = [self.u.selectAtoms(ref) for ref in self.refsel]
+        elif self.refsel != None:
             self._refsel_atoms = self.u.selectAtoms(self.refsel)
