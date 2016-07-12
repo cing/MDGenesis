@@ -107,16 +107,16 @@ class CylinderTiltHistogram(PerFrameAnalysis):
             return pd.concat([self.intdata["bincount"], edges], axis=1)
 
     def _update_selections(self):
-        self._top_com = self.u.selectAtoms(self.topsel).centerOfMass()
-        self._bottom_com = self.u.selectAtoms(self.bottomsel).centerOfMass()
-        self._ref_com = self.u.selectAtoms(self.refsel).centerOfMass()
+        self._top_com = self.u.select_atoms(self.topsel).center_of_mass()
+        self._bottom_com = self.u.select_atoms(self.bottomsel).center_of_mass()
+        self._ref_com = self.u.select_atoms(self.refsel).center_of_mass()
 
         self._midpoint = (self._top_com+self._bottom_com)/2.0
         self._height = np.linalg.norm(self._top_com-self._bottom_com)
         self._sradius = (self._height/2) + self.extension
 
         #self._sids = np.array([sol.resid for sol in self.u.selectAtoms(self.solutesel)])
-        self._scoord = self.u.selectAtoms(self.solutesel).coordinates()
+        self._scoord = self.u.select_atoms(self.solutesel).coordinates()
 
 class CylinderHistogram(PerFrameAnalysis):
 
@@ -211,8 +211,8 @@ class CylinderHistogram(PerFrameAnalysis):
             return pd.concat([self.intdata["bincount"], edges], axis=1)
 
     def _update_selections(self):
-        self._ref_com = self.u.selectAtoms(self.refsel).centerOfMass()
+        self._ref_com = self.u.select_atoms(self.refsel).center_of_mass()
         self._height = self.extension
 
-        #self._sids = np.array([sol.resid for sol in self.u.selectAtoms(self.solutesel)])
-        self._scoord = self.u.selectAtoms(self.solutesel).coordinates()
+        #self._sids = np.array([sol.resid for sol in self.u.select_atoms(self.solutesel)])
+        self._scoord = self.u.select_atoms(self.solutesel).coordinates()

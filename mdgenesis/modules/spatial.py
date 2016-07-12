@@ -34,7 +34,7 @@ class DistanceBetweenPoints(PerFrameAnalysis):
             self.framedata = framedata
 
     def process(self, frame, frameid):
-        r = self._s1.centerOfMass() - self._s2.centerOfMass()
+        r = self._s1.center_of_mass() - self._s2.center_of_mass()
         d = np.sqrt(np.sum(r*r))
         dist_df = pd.DataFrame(d, columns=["dist"], index=[frameid])
         self.framedata = self.framedata.append(dist_df)
@@ -83,13 +83,13 @@ class CenterOfMassPosition(PerFrameAnalysis):
     def process(self, frame, frameid):
         """ Process a single trajectory frame """
         if self.refsel == None:
-            rel_pos = [a.centerOfMass() for a in self._selection_atoms]
+            rel_pos = [a.center_of_mass() for a in self._selection_atoms]
         elif len(self.refsel) == len(self._selection_atoms):
-            rel_pos = [a.centerOfMass()-ref.centerOfMass()
+            rel_pos = [a.center_of_mass()-ref.center_of_mass()
                        for a,ref in zip(self._selection_atoms, self._refsel_atoms)]
         else:
-            ref_com = self._refsel_atoms.centerOfMass()
-            rel_pos = [a.centerOfMass()-ref_com for a in self._selection_atoms]
+            ref_com = self._refsel_atoms.center_of_mass()
+            rel_pos = [a.center_of_mass()-ref_com for a in self._selection_atoms]
 
         p = np.hstack([p[self.saxis] for p in rel_pos]).reshape(1,len(self._poslabels))
         pos_df = pd.DataFrame(p, columns=self._poslabels, index=[frameid])

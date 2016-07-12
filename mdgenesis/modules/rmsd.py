@@ -23,7 +23,7 @@ class FrameData(object):
             self.coordinates = atom_group.coordinates().copy()
         else:
             self.masses = atom_group.masses()
-            self.com = atom_group.centerOfMass().astype(numpy.float32)
+            self.com = atom_group.center_of_mass().astype(numpy.float32)
             self.coordinates = atom_group.coordinates() - self.com
 
 class RMSD(object):
@@ -48,7 +48,7 @@ class RMSD(object):
 
     def process(self, ts):
         # print "RMSD Fitting Frame %5d" % (ts.frame)
-        x_com = self.fit_trj.atoms.centerOfMass().astype(numpy.float32)
+        x_com = self.fit_trj.atoms.center_of_mass().astype(numpy.float32)
         self.fit_trj.coordinates[:] = self.fit_trj.atoms.coordinates() - x_com
         R = numpy.matrix(MDAnalysis.core.rms_fitting.rms_rotation_matrix(self.fit_trj.coordinates, self.fit_ref.coordinates, self.fit_ref.masses),dtype=numpy.float32)
         ts._pos   -= x_com

@@ -99,7 +99,7 @@ class MultiCylinderBoolHistogram(PerFrameAnalysis):
         return True
 
     def _update_selections(self):
-        self._ref_coms = np.array([self.u.selectAtoms(rs).centerOfMass() for rs in self.refsel])
+        self._ref_coms = np.array([self.u.selectAtoms(rs).center_of_mass() for rs in self.refsel])
         if self.jointz:
             self._ref_coms[:, self.saxis]=self._ref_coms[0, self.saxis]
         self._height = self.extension

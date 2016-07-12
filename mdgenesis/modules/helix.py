@@ -113,6 +113,12 @@ class HelixRotation(AllAtOnceAnalysis):
             proj_of_ref = vector_projection_onto_plane(ref_pos - helix_com, paxis)
 
             a = angle_between_vectors(proj_of_com, proj_of_ref)
+
+            # Compute the signed angle
+            cross = np.cross(proj_of_com, proj_of_ref)
+            cross_dot_paxis = np.einsum('ij,ij->i', paxis, cross)
+            a[cross_dot_paxis < 0] *= -1
+
             temp_results.append(a)
 
         return pd.DataFrame(temp_results)
