@@ -216,3 +216,65 @@ class CylinderHistogram(PerFrameAnalysis):
 
         #self._sids = np.array([sol.resid for sol in self.u.select_atoms(self.solutesel)])
         self._scoord = self.u.select_atoms(self.solutesel).coordinates()
+
+class CylinderCount(PerFrameAnalysis):
+
+    def __init__(self, solutesel, minval=-10, maxval=10,
+                 refsel="protein",
+                 radius=5, extension=0, soluteaxis=2):
+        """Compute a count of solute molecules coordinates within
+        a cylinder along a given axis.
+
+        :Arguments:
+          *solutesel*
+            Solute selection string
+          *minval*
+            minimum value to consider count, rel. to refsel
+          *maxval*
+            maximum value to consider count, rel. to refsel
+          *refsel*
+            cylinder C.O.M. string
+          *radius*
+            radius of cylinder
+          *extension*
+            extension of cylinder centered at the C.O.M. value
+          *soluteaxis*
+            coordination of solute molecules to histogram
+
+        """
+
+        self.solutesel = solutesel
+        self.minval = minval
+        self.maxval = maxval
+        self.refsel = refsel
+        self.r2 = radius**2
+        self.extension = extension
+        self.saxis = soluteaxis
+        self.osaxis = list(set(range(3))-set([self.saxis]))
+
+    def _loadcheckpoint(self, framedata, intdata):
+        self.intdata = intdata
+        if framedata.empty:
+            self.framedata = pd.DataFrame(columns=["count"])
+        else:
+            self.framedata = framedata
+
+    def process(self, frame, frameid):
+        """ Process a single trajectory frame """
+        self._update_selections()
+
+        radius_bool = np.sum(((self._scoord - self._ref_com)**2)[:,self.osaxis],axis=1) <= self.r2
+        height_bool1 = (self._scoord - self._ref_com)[:,self.saxis] < self.maxval
+        height_bool2 = (self._scoord - self._ref_com)[:,self.saxis] > self.minval
+        cylinder_bool = radius_bool & height_bool1 & height_bool2
+
+        c = np.sum(cylinder_bool)
+        c_df = pd.DataFrame(c, columns=["count"], index=[frameid])
+        self.framedata = self.framedata.append(c_df)
+        return True
+
+    def _update_selections(self):
+        self._ref_com = self.u.select_atoms(self.refsel).center_of_mass()
+
+        #self._sids = np.array([sol.resid for sol in self.u.select_atoms(self.solutesel)])
+        self._scoord = self.u.select_atoms(self.solutesel).coordinates()
