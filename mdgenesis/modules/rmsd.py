@@ -5,62 +5,42 @@ import pandas as pd
 
 #from MDAnalysis import *
 #from MDAnalysis.core.AtomGroup import Residue, AtomGroup
-#import MDAnalysis.core.rms_fitting
+import MDAnalysis.analysis.rms
+
 from analysis import PerFrameAnalysis
+from analysis import AllAtOnceAnalysis
 
-'''
-# RMSD with alignment, written by David Caplan
-class FrameData(object):
-    atoms = None
-    coordinates = None
-    masses = None
-    com = None
-    rmsd = None
+class MultiRMSD(AllAtOnceAnalysis):
 
-    def __init__(self, atom_group, allocate_only=False):
-        self.atoms = atom_group
-        if allocate_only:
-            self.coordinates = atom_group.coordinates().copy()
-        else:
-            self.masses = atom_group.masses()
-            self.com = atom_group.center_of_mass().astype(numpy.float32)
-            self.coordinates = atom_group.coordinates() - self.com
+    def __init__(self, ref, select="protein and name CA",
+                 group_selections=None, group_names=None):
+        """ RMSD is computed after an alignment on "select" to the reference
+            and then RMSD is computed for all other selections.
+        """
+        self.select = select
+        self.group_selections = group_selections
+        self.ref = ref
 
-class RMSD(object):
-    _selection = None
-    _rmsds = []
-
-    def _rmsd(self, a,b):
-        """Returns RMSD between two coordinate sets a and b."""
-        return numpy.sqrt(numpy.sum(numpy.power(a-b,2))/a.shape[0])
-
-    def __init__(self, selection):
-        self._selection = selection
-
-    def prepare(self, ref, trj):
-        ref_atoms = ref.selectAtoms(self._selection)
-        trj_atoms = trj.selectAtoms(self._selection)
-        self.fit_ref = FrameData(ref.selectAtoms('backbone'))
-        self.fit_trj = FrameData(trj.selectAtoms('backbone'))
-        self.rmsd_ref = FrameData(ref_atoms)
-        self.rmsd_trj = FrameData(trj_atoms, allocate_only=True)
-        # print "Done RMSD prepare."
-
-    def process(self, ts):
-        # print "RMSD Fitting Frame %5d" % (ts.frame)
-        x_com = self.fit_trj.atoms.center_of_mass().astype(numpy.float32)
-        self.fit_trj.coordinates[:] = self.fit_trj.atoms.coordinates() - x_com
-        R = numpy.matrix(MDAnalysis.core.rms_fitting.rms_rotation_matrix(self.fit_trj.coordinates, self.fit_ref.coordinates, self.fit_ref.masses),dtype=numpy.float32)
-        ts._pos   -= x_com
-        ts._pos[:] = ts._pos * R
-        ts._pos   += self.fit_ref.com
-        self._rmsds.append(self._rmsd(self.rmsd_ref.atoms.coordinates(),self.rmsd_trj.atoms.coordinates()))
-        # print self._rmsds[-1]
+        self.colnames=["frame","time","align"]
+        if group_selections != None:
+            if group_names != None:
+                if len(group_names) == len(group_selections):
+                    self.colnames.extend(group_names)
+                else:
+                    ngroups = len(group_selections)
+                    lcols = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[:ngroups]
+                    self.colnames.extend(list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"[:ngroups]))
+            else:
+                ngroups = len(group_selections)
+                lcols = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[:ngroups]
+                self.colnames.extend(list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"[:ngroups]))
 
     def results(self):
-        return self._rmsds
-
-'''
+        R = MDAnalysis.analysis.rms.RMSD(self.u, self.ref,
+                                         select=self.select,
+                                         groupselections=self.group_selections)
+        R.run()
+        return pd.DataFrame(R.rmsd, columns=self.colnames)
 
 class RMSD(PerFrameAnalysis):
 
