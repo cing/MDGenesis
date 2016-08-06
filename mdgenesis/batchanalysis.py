@@ -126,6 +126,7 @@ class BatchAnalysis():
             if not analysis.sync:
                 print " Sync not set, clearing %s/analysis_log" % path
                 self.sim.data.remove(path+'/analysis_log')
+                self.sim.data.remove(path)
 
         for path, analysis in self._sequential.items():
             print " Processing %s" % path
