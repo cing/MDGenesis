@@ -217,6 +217,113 @@ class CylinderHistogram(PerFrameAnalysis):
         #self._sids = np.array([sol.resid for sol in self.u.select_atoms(self.solutesel)])
         self._scoord = self.u.select_atoms(self.solutesel).coordinates()
 
+class ConditionalCylinderHistogram(CylinderHistogram):
+
+    def __init__(self, solutesel, refsel="protein",
+                 radius=5, extension=0, soluteaxis=2,
+                 histmin=-50, histmax=50, histbins=200,
+                 conditional_sel=None, conditional_bool=None):
+        """Compute histogram of solute molecules coordinates (X, Y, or Z) within
+        a cylinder along a given axis based on a boolean conditional. Useful
+        for examining hydration based on sidechain conformation, etc.
+
+        :Arguments:
+          *solutesel*
+            Solute selection string
+          *refsel*
+            cylinder C.O.M. string
+          *radius*
+            radius of cylinder
+          *extension*
+            extension of cylinder centered at the C.O.M. value
+          *soluteaxis*
+            coordination of solute molecules to histogram
+          *histmin*
+            minimum value of your box, relative to refsel
+          *histmax*
+            maximum value of your box, relative to refsel
+          *histbins*
+            number of histogram bins along the solute axis of the box
+          *conditional_sel*
+            string for eval() to select/compute quantity of interest
+          *conditional_bool*
+            string for eval() that returns True/False (use vars in conditional_sel)
+
+        """
+
+        self.solutesel = solutesel
+        self.refsel = refsel
+        self.r2 = radius**2
+        self.extension = extension
+        self.saxis = soluteaxis
+        self.osaxis = list(set(range(3))-set([self.saxis]))
+
+        self.histbins = histbins
+        self.histmin = histmin
+        self.histmax = histmax
+
+        self.csel = conditional_sel
+        self.cbool = conditional_bool
+
+        #self._all_edges = np.linspace(histmin, histmax, num=histbins)
+
+    # We don't need to initialize framedata because it's only made
+    # when results() is called.
+    def _loadcheckpoint(self, framedata, intdata):
+        self.framedata = framedata
+        if intdata.empty:
+            self.intdata = pd.DataFrame(np.zeros([self.histbins,3],
+                                                 dtype=np.int64),
+                                        columns=["bincount_true",
+                                                 "bincount_false",
+                                                 "total_frames"])
+        else:
+            self.intdata = intdata
+
+    def process(self, frame, frameid):
+        """ Process a single trajectory frame """
+        self._update_selections()
+
+        radius_bool = np.sum(((self._scoord - self._ref_com)**2)[:,self.osaxis],axis=1) <= self.r2
+        height_bool1 = (self._scoord - self._ref_com)[:,self.saxis] < self._height*0.5
+        height_bool2 = (self._scoord - self._ref_com)[:,self.saxis] > -self._height*0.5
+        cylinder_bool = radius_bool & height_bool1 & height_bool2
+
+        # boolean mask for distances below the radius, hist'd on solute-axis
+        h = np.histogram(self._scoord[cylinder_bool][:,self.saxis] - self._ref_com[self.saxis],
+                         range=[self.histmin, self.histmax],
+                         bins=self.histbins, normed=False)[0]
+
+        # Yep, I make three entirely new dataframes for each frame!
+        self.intdata.ix[0, "total_frames"] += 1
+
+        if (conditional_sel != None) & (conditional_bool != None):
+            eval(conditional_sel)
+            if eval(conditional_bool):
+                self.intdata["bincount_true"] += pd.Series(h)
+            else:
+                self.intdata["bincount_false"] += pd.Series(h)
+        else:
+            self.intdata["bincount_true"] += pd.Series(h)
+
+        # If you do not return True, then the frame will be re-analyzed next
+        # time, but heads up, that could mess up your intermediate data!
+        return True
+
+    def results(self):
+        frames_processed = float(self.intdata["total_frames"][0])
+        edges = pd.DataFrame(np.linspace(self.histmin, self.histmax,
+                                         num=self.histbins+1)[:self.histbins],
+                             columns=["edges"])
+
+        if frames_processed > 0:
+            return pd.concat([self.intdata["bincount_true"]/frames_processed,
+                              self.intdata["bincount_false"]/frames_processed,
+                              edges], axis=1)
+        else:
+            return pd.concat([self.intdata["bincount_true"],
+                              self.intdata["bincount_false"], edges], axis=1)
+
 class CylinderCount(PerFrameAnalysis):
 
     def __init__(self, solutesel, minval=-10, maxval=10,
