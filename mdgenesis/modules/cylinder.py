@@ -262,8 +262,8 @@ class ConditionalCylinderHistogram(CylinderHistogram):
         self.histmin = histmin
         self.histmax = histmax
 
-        self.csel = conditional_sel
-        self.cbool = conditional_bool
+        self.conditional_sel = conditional_sel
+        self.conditional_bool = conditional_bool
 
         #self._all_edges = np.linspace(histmin, histmax, num=histbins)
 
@@ -297,9 +297,9 @@ class ConditionalCylinderHistogram(CylinderHistogram):
         # Yep, I make three entirely new dataframes for each frame!
         self.intdata.ix[0, "total_frames"] += 1
 
-        if (conditional_sel != None) & (conditional_bool != None):
-            eval(conditional_sel)
-            if eval(conditional_bool):
+        if (self.conditional_sel != None) & (self.conditional_bool != None):
+            eval(self.conditional_sel)
+            if eval(self.conditional_bool):
                 self.intdata["bincount_true"] += pd.Series(h)
             else:
                 self.intdata["bincount_false"] += pd.Series(h)
