@@ -245,7 +245,7 @@ class ConditionalCylinderHistogram(CylinderHistogram):
           *histbins*
             number of histogram bins along the solute axis of the box
           *conditional_sel*
-            string for eval() to select/compute quantity of interest
+            string for exec() to select/compute quantity of interest
           *conditional_bool*
             string for eval() that returns True/False (use vars in conditional_sel)
 
@@ -298,7 +298,7 @@ class ConditionalCylinderHistogram(CylinderHistogram):
         self.intdata.ix[0, "total_frames"] += 1
 
         if (self.conditional_sel != None) & (self.conditional_bool != None):
-            eval(self.conditional_sel)
+            exec(self.conditional_sel)
             if eval(self.conditional_bool):
                 self.intdata["bincount_true"] += pd.Series(h)
             else:
