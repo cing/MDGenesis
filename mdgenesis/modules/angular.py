@@ -59,7 +59,8 @@ class PhiPsiAngle(PerFrameAnalysis):
     def process(self, frame, frameid):
         """ Process a single trajectory frame """
         angs = [bbatoms.dihedral.value() for bbatoms in self._phi_sel+self._psi_sel]
-        dihe_df = pd.DataFrame(np.array(angs).T, columns=["phi","psi"], index=[frameid])
+        cols = [str(a)+"-phi" for a in self.resnums]+[str(a)+"-psi" for a in self.resnums]
+        dihe_df = pd.DataFrame(np.array(angs).T, columns=cols, index=[frameid])
         self.framedata = self.framedata.append(dihe_df)
         return True
 
