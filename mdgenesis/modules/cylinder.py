@@ -327,7 +327,7 @@ class ConditionalCylinderHistogram(CylinderHistogram):
 class CylinderCount(PerFrameAnalysis):
 
     def __init__(self, solutesel, minval=-10, maxval=10,
-                 refsel="protein",
+                 refsel="protein", resids=False,
                  radius=5, extension=0, soluteaxis=2):
         """Compute a count of solute molecules coordinates within
         a cylinder along a given axis.
@@ -347,6 +347,8 @@ class CylinderCount(PerFrameAnalysis):
             extension of cylinder centered at the C.O.M. value
           *soluteaxis*
             coordination of solute molecules to histogram
+          *resids*
+            boolean to save the resids inside the cylinder
 
         """
 
@@ -358,6 +360,7 @@ class CylinderCount(PerFrameAnalysis):
         self.extension = extension
         self.saxis = soluteaxis
         self.osaxis = list(set(range(3))-set([self.saxis]))
+        self.resids = resids
 
     def _loadcheckpoint(self, framedata, intdata):
         self.intdata = intdata
@@ -376,7 +379,13 @@ class CylinderCount(PerFrameAnalysis):
         cylinder_bool = radius_bool & height_bool1 & height_bool2
 
         c = np.sum(cylinder_bool)
-        c_df = pd.DataFrame(c, columns=["count"], index=[frameid])
+        # Extract out the resids at each frame (useful for visualization in VMD)
+        if self.resids:
+            res_idx = self.u.select_atoms(self.solutesel).resids[np.where(cylinder_bool)]
+            res_str = " ".join([str(res) for res in res_idx])
+            c_df = pd.DataFrame([[c, res_str]], columns=["count","resids"], index=[frameid])
+        else:
+            c_df = pd.DataFrame(c, columns=["count"], index=[frameid])
         self.framedata = self.framedata.append(c_df)
         return True
 
