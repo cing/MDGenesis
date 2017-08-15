@@ -14,7 +14,13 @@ class HBonds(AllAtOnceAnalysis):
 
     def results(self):
         h = MDAnalysis.analysis.hbonds.HydrogenBondAnalysis(self.u, self._selection_str1, self._selection_str2,
-                                                            distance=3.0, angle=120.0)
+                                                            distance=3.0, angle=120.0, step=2, start=None, stop=None)
         h.run()
         h.generate_table()
-        return pd.DataFrame(h.count_by_type())
+        df = pd.DataFrame(h.count_by_type())
+        df["donor_resnm"] = df["donor_resnm"].astype(str)
+        df["donor_heavy_atom"] = df["donor_heavy_atom"].astype(str)
+        df["donor_atom"] = df["donor_atom"].astype(str)
+        df["acceptor_resnm"] = df["acceptor_resnm"].astype(str)
+        df["acceptor_atom"] = df["acceptor_atom"].astype(str)
+        return df
