@@ -85,20 +85,30 @@ class HelixTilt(AllAtOnceAnalysis):
 
 class HelixRotation(AllAtOnceAnalysis):
 
-    def __init__(self, helix_selection, reference_selection, principal_axis_selection=None):
+    def __init__(self, helix_selection, reference_selection, principal_axis_selection=None,
+                 principal_axis_quadrant=None):
         """ Helix rotation is computed for a helical selection with respect
             to the center of mass of the principal axis and a reference atom.
-            If helix selection includes multiple atoms, a center of mass is calculated
+            If helix selection includes multiple atoms, a center of mass is calculated.
+            Principal axis quadrant ensures paxis is less than 90 degrees.
         """
 
         self._reference_selection = reference_selection
         self._paxis_selection = principal_axis_selection
         self._helix_selection = helix_selection
+        if principal_axis_quadrant != None:
+            self._principal_axis_quadrant = principal_axis_quadrant
+        else:
+            self._principal_axis_quadrant = np.array([0,0,1])
 
     def results(self):
         p_slice = self.trj.atom_slice(self._principal_axis_atoms)
         paxis = principal_axis(p_slice)
         paxis_com = md.compute_center_of_mass(p_slice)
+
+        # Handle the 180 degree flip based on quadrant so there's no uncertainty
+        quad_dot_paxis = np.dot(paxis, self._principal_axis_quadrant)
+        paxis[quad_dot_paxis < 0] *= -1
 
         temp_results = []
         for ref_atom, helix_atoms in zip(self._reference_atoms, self._helix_atoms):
@@ -109,6 +119,7 @@ class HelixRotation(AllAtOnceAnalysis):
 
             helix_com = self.trj.xyz[:, helix_atoms, :].mean(axis=1)
 
+            # Principal axis defines a plane for projection
             proj_of_com = vector_projection_onto_plane(paxis_com - helix_com, paxis)
             proj_of_ref = vector_projection_onto_plane(ref_pos - helix_com, paxis)
 
