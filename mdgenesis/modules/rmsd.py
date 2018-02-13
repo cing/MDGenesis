@@ -54,7 +54,7 @@ class RMSD(PerFrameAnalysis):
     def _loadcheckpoint(self, framedata, intdata):
         self.intdata = intdata
         if framedata.empty:
-            self.framedata = pd.DataFrame(columns=["rmsd"])
+            self.framedata = pd.DataFrame(columns=["rmsd"],dtype=float)
         else:
             self.framedata = framedata
 
@@ -144,7 +144,7 @@ class RadiusOfGyration(PerFrameAnalysis):
     def _loadcheckpoint(self, framedata, intdata):
         self.intdata = intdata
         if framedata.empty:
-            self.framedata = pd.DataFrame(columns=["rgyr"])
+            self.framedata = pd.DataFrame(columns=["rgyr"],dtype=float)
         else:
             self.framedata = framedata
 

@@ -365,7 +365,7 @@ class CylinderCount(PerFrameAnalysis):
     def _loadcheckpoint(self, framedata, intdata):
         self.intdata = intdata
         if framedata.empty:
-            self.framedata = pd.DataFrame(columns=["count"])
+            self.framedata = pd.DataFrame(columns=["count"],dtype=float)
         else:
             self.framedata = framedata
 

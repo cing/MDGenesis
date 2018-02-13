@@ -29,7 +29,7 @@ class DistanceBetweenPoints(PerFrameAnalysis):
     def _loadcheckpoint(self, framedata, intdata):
         self.intdata = intdata
         if framedata.empty:
-            self.framedata = pd.DataFrame(columns=["dist"])
+            self.framedata = pd.DataFrame(columns=["dist"],dtype=float)
         else:
             self.framedata = framedata
 
@@ -76,7 +76,7 @@ class CenterOfMassPosition(PerFrameAnalysis):
     def _loadcheckpoint(self, framedata, intdata):
         self.intdata = intdata
         if framedata.empty:
-            self.framedata = pd.DataFrame(columns=self._poslabels)
+            self.framedata = pd.DataFrame(columns=self._poslabels,dtype=float)
         else:
             self.framedata = framedata
 
